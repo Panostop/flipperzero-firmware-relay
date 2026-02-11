@@ -58,13 +58,22 @@ static void nfc_cli_print_usage(void) {
     printf("nfc <cmd>\r\n");
     printf("Cmd list:\r\n");
     if(furi_hal_rtc_is_flag_set(FuriHalRtcFlagDebug)) {
-        printf("\tfield\t - turn field on\r\n");
-        printf("\tfield\t - turn field off \r\n");
+		printf("\tfield\t\t - turn field on with warning\r\n");
+        printf("\ton\t\t - turn field on without warning\r\n");
+        printf("\toff\t\t - turn field off \r\n");
         printf("\tmode_14443_a\t - set mode ISO 14443 A\r\n");
         printf("\tmode_14443_b\t - set mode ISO 14443 B\r\n");
-        printf("\tmode_15693\t - set mode ISO 15693\r\n");
+        printf("\tmode_15693\t\t - set mode ISO 15693\r\n");
+        printf("\tmode_emu_14443_a\t - set mode ISO 14443 A\r\n");
+        printf("\tmode_emu_14443_b\t - set mode ISO 14443 B\r\n");
+        printf("\tmode_emu_15693\t - set mode ISO 15693\r\n");
         printf("\treqa\t - perform REQA in ISO 14443 A mode\r\n");
         printf("\tsend <add_crc:in> <cmd:he>\t - send command\r\n");
+        printf("\tset_uid <UID> (format XX XX ...) - set the UID for the emulated tag\r\n");
+        printf("\tset_atqa <ATQA> (format XX XX)\t\t - set the ATQA for the emulated tag\r\n");
+        printf("\tset_sak <SAK> (format XX)\t\t - set the SAK for the emulated tag\r\n");
+        printf("\trun_emu\t\t\t\t - run emulation for the configured tag\r\n");
+		
     }
 }
 
@@ -575,11 +584,11 @@ static void nfc_cli(Cli* cli, FuriString* args, void* context) {
 }
 
 void nfc_on_system_start(void) {
-#ifdef SRV_CLI
+//#ifdef SRV_CLI
     Cli* cli = furi_record_open(RECORD_CLI);
     cli_add_command(cli, "nfc", CliCommandFlagDefault, nfc_cli, NULL);
     furi_record_close(RECORD_CLI);
-#else
-    UNUSED(nfc_cli);
-#endif
+//#else
+ //   UNUSED(nfc_cli);
+//#endif
 }
