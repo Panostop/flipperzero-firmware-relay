@@ -44,6 +44,9 @@ from smartcard.util import toHexString
 
 #we will need a shell subprocess to communicate with the Flipper
 from subprocess import * 
+import time
+from pynfcreader.devices import flipper_zero
+from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
 
 r=readers() #list pc/sc readers
@@ -82,6 +85,7 @@ def getCardInfo():
     return CardInfoLines
     
 
+
 def main():
     global r
   
@@ -107,17 +111,11 @@ def main():
 
     card_info = getCardInfo() # [ATQA, UID, SAK]
     
-    print(card_info)
-    
-    for i in range(2): #not needed for SAK
+    for i in range(3):
         card_info[i] = "".join(card_info[i].split()) #joins all the bytes in a continuous string for later
-    print(card_info)
-        
     
-  
 
-
-
+    
 
 
 

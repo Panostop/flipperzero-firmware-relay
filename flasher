@@ -1,0 +1,5 @@
+#! /bin/bash
+# compile and flash the firmware
+./fbt -c
+./fbt
+./fbt flash_usb

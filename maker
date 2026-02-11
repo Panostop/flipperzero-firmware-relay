@@ -1,5 +1,0 @@
-#!/bin/bash
-
-./fbt -c
-./fbt
-./fbt flash_usb
