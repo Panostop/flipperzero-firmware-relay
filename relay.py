@@ -72,7 +72,6 @@ def getCardInfo():
         del CardInfoLines[0]
         del CardInfoLines[0]
         del CardInfoLines[0]
-        del CardInfoLines[0]
         del CardInfoLines[-1]
         print(CardInfoLines)
         # keep only the second half (the actual values after the ': ')
@@ -94,7 +93,7 @@ def main():
     print("")
 
     if not len(r) == 1:
-        print(f"Need exactly 1 ACR122 to continue, {len(r)} readers potentially available.")
+        print(f"Need exactly 1 ACR122 to continue, {len(r)} readers available.")
         exit(1)
   
     # Now we want to wait for the presence of a card on the ACR122, 
