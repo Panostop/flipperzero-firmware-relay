@@ -68,6 +68,12 @@ git clone --recursive https://github.com/flipperdevices/flipperzero-firmware.git
 
 ## Building
 
+Panostop - I have made a small script to automate cleaning, compiling and flashing to the flipper, you can run it with :
+```shell
+./maker
+```
+You can still use fbt normally with the following instructions :
+
 Build firmware using Flipper Build Tool:
 
 ```shell
