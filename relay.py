@@ -77,7 +77,6 @@ def getCardInfo():
         
         # keep only the second half (the actual values after the ': ')
         CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3)]
-        print(CardInfoLines)
     
     # ATQA / UID / SAK
     return CardInfoLines
@@ -123,4 +122,4 @@ def main():
 
 
 if __name__=='__main__':
-  getCardInfo()
+  main()
