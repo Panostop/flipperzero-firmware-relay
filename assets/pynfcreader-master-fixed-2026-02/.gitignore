@@ -1,7 +1,0 @@
-*.pyc
-doc
-test
-.idea/
-build/
-dist/
-pyNFCReader.egg-info/
