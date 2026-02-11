@@ -110,7 +110,7 @@ def main():
     print(card_info)
     
     for i in range(2): #not needed for SAK
-        "".join(card_info[i].split()) #joins all the bytes in a continuous string for later
+        card_info[i] = "".join(card_info[i].split()) #joins all the bytes in a continuous string for later
     print(card_info)
         
     
