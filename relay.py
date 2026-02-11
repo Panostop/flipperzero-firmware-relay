@@ -73,6 +73,7 @@ def getCardInfo():
         del CardInfoLines[0]
         del CardInfoLines[0]
         del CardInfoLines[-1]
+        del CardInfoLines[-1]
         print(CardInfoLines)
         # keep only the second half (the actual values after the ': ')
         CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3)]
