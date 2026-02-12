@@ -59,8 +59,11 @@ CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access C
 
 # Initialize and connect to the flipperZero
 flipper = flipper_zero.FlipperZero("", debug=False)
+print("set1")
 flipper.connect()
+print("set2")
 flipper.set_mode_emu_iso14443A()
+print("set3")
 
 
 
