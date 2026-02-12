@@ -46,8 +46,8 @@ from smartcard.util import toHexString
 #we will need a shell subprocess to communicate with the Flipper
 from subprocess import * 
 import time
-from pyNFCReader.devices import flipper_zero
-from pyNFCReader.sessions.iso14443.iso14443a import Iso14443ASession
+from pynfcreader.devices import flipper_zero
+from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
 
 
