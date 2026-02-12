@@ -48,7 +48,6 @@ from smartcard import PassThruCardService
 
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
-from pynfcreader.sessions.iso14443.tpdu import Tpdu
 
 #we will need a shell to get the card's information
 from subprocess import * 
@@ -99,7 +98,7 @@ def getCardInfo() -> list[str]:
 
 def transfer_apdu(apdu: str, card: PassThruCardService) -> str:
     print(f"apdu {apdu}")
-    card_response, sw1, sw2 = card.connection.transmit()
+    card_response, sw1, sw2 = card.transmit()
     return card_response
     
 class Emu(Iso14443ASession):
@@ -120,47 +119,17 @@ class Emu(Iso14443ASession):
 
     def low_level_dispatcher(self):
         while 1:
-            capdu = bytes()
-        ats_sent = False
-
-        iblock_resp_lst = []
-
-        while 1:
-            r = flipper.emu_get_cmd()
+            received = flipper.emu_get_cmd()
             rtpdu = None
-            print(f"tpdu < {r}")
-            if r == "off":
-                self.field_off()
-            elif r == "on":
-                self.field_on()
-                ats_sent = False
+            print(f"tpdu < {received}")
+            if received == "off":
+                print("field off")
+            elif received == "on":
+                print("field on")
             else:
-                tpdu = Tpdu(bytes.fromhex(r))
-
-                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
-                    rtpdu, crc = "0A788082022063CBA3A0", True
-                    ats_sent = True
-                elif tpdu.r:
-                    rtpdu, crc = self.rblock_process(tpdu)
-                elif tpdu.s:
-                    print("s block")
-                    # Deselect
-                    if len(tpdu._inf_field) == 0:
-                        rtpdu, crc = "C2E0B4", False
-                    # Otherwise, it is a WTX
-
-                elif tpdu.i:
-                    print("i block")
-                    capdu += tpdu.inf
-
-                    if tpdu.is_chaining() is False:
-                        rapdu = self.process_function(capdu)
-                        capdu = bytes()
-                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
-                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
-
+                rtpdu=self.process_function(received, self.card)
                 print(f">>> rtdpu {rtpdu}\n")
-                flipper.emu_send_resp(bytes.fromhex(rtpdu), crc)
+                self.drv.emu_send_resp(rtpdu.encode())
 
 def main():
 
@@ -180,10 +149,10 @@ def main():
     #     since we cannot start emulating without it
   
     #configure the waitforcard() method to accept any cardType for 5s on the ACR122
-    cardrequest = CardRequest(timeout=5, cardType=CARDTYPE) 
-    # launch the waitforcard event and connect to the card
-    card_to_emulate = cardrequest.waitforcard() 
-    card_to_emulate.connection.connect()
+     
+    # connect to the card
+    connection = reader_list[0].createConnection()
+    connection.connect()
 
     card_info = getCardInfo() # [ATQA, UID, SAK]
     print(f"This card will be emulated :\
@@ -199,7 +168,7 @@ def main():
     flipper.set_uid(card_info[1])
     flipper.set_sak(card_info[2])
 
-    relay = Emu(drv=flipper, process_function=transfer_apdu, card=card_to_emulate)
+    relay = Emu(drv=flipper, process_function=transfer_apdu, card=connection)
     relay.run()
 
 
