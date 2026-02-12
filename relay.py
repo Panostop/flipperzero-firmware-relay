@@ -48,10 +48,21 @@ from smartcard import PassThruCardService
 
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
+from pynfcreader.sessions.iso14443.tpdu import Tpdu
 
 #we will need a shell to get the card's information
 from subprocess import * 
 import time
+
+
+reader_list=readers() #list pc/sc readers
+CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
+
+# Initialize and connect to the flipperZero
+flipper = flipper_zero.FlipperZero("", debug=False)
+flipper.connect()
+flipper.set_mode_emu_iso14443A()
+
 
 
 def getCardInfo() -> list[str]:
@@ -109,27 +120,51 @@ class Emu(Iso14443ASession):
 
     def low_level_dispatcher(self):
         while 1:
-            received = self.drv.emu_get_cmd()
+            capdu = bytes()
+        ats_sent = False
+
+        iblock_resp_lst = []
+
+        while 1:
+            r = flipper.emu_get_cmd()
             rtpdu = None
-            print(f"tpdu < {received}")
-            if received == "off":
-                print("field off")
-            elif received == "on":
-                print("field on")
+            print(f"tpdu < {r}")
+            if r == "off":
+                self.field_off()
+            elif r == "on":
+                self.field_on()
+                ats_sent = False
             else:
-                rtpdu=self.process_function(received, self.card)
+                tpdu = Tpdu(bytes.fromhex(r))
+
+                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
+                    rtpdu, crc = "0A788082022063CBA3A0", True
+                    ats_sent = True
+                elif tpdu.r:
+                    rtpdu, crc = self.rblock_process(tpdu)
+                elif tpdu.s:
+                    print("s block")
+                    # Deselect
+                    if len(tpdu._inf_field) == 0:
+                        rtpdu, crc = "C2E0B4", False
+                    # Otherwise, it is a WTX
+
+                elif tpdu.i:
+                    print("i block")
+                    capdu += tpdu.inf
+
+                    if tpdu.is_chaining() is False:
+                        rapdu = self.process_function(capdu)
+                        capdu = bytes()
+                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
+                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+
                 print(f">>> rtdpu {rtpdu}\n")
-                self.drv.emu_send_resp(rtpdu.encode())
+                flipper.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
 def main():
 
-    reader_list=readers() #list pc/sc readers
-    CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
-
-    # Initialize and connect to the flipperZero
-    flipper = flipper_zero.FlipperZero("", debug=False)
-    flipper.connect()
-    flipper.set_mode_emu_iso14443A()
+    
 
     # Display the list of readers
     print("Available PC/SC readers :\n")
