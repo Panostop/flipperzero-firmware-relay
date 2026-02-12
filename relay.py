@@ -19,8 +19,9 @@ To set up the Flipper :
     - run : 
         - git clone "https://github.com/Panostop/flipperzero-firmware-relay.git" 
         - cd flipperzero-firmware-relay
-        - ./fbt
-        - ./fbt flash_usb
+
+        # this script can be used each time you need it, it cleans, compiles and flashes the flipper
+        - ./flasher
     - wait for the build and installation to finish on the Flipper (can take a while)
 
 The ACR122 is not used twice because of restrictions in emulation mode.
@@ -49,7 +50,7 @@ from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
 
-r=readers() #list pc/sc readers
+
 CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
 
 
@@ -71,15 +72,15 @@ def getCardInfo():
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
      
-        # filter the output to keep the info we need
-        del CardInfoLines[0]
-        del CardInfoLines[0]
-        del CardInfoLines[0]
-        del CardInfoLines[-1]
-        del CardInfoLines[-1]
+        # filter the output to keep the info we need, deletes the first three lines and the las
+        #del CardInfoLines[0]
+        #del CardInfoLines[0]
+        #del CardInfoLines[0]
+        #del CardInfoLines[-1]
+        #del CardInfoLines[-1]
         
-        # keep only the second half (the actual values after the ': ')
-        CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3)]
+        # keep only the second half for the lines we need (the actual values after the ': ')
+        CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3, 6)]
     
     # ATQA / UID / SAK
     return CardInfoLines
@@ -87,7 +88,7 @@ def getCardInfo():
 
 
 def main():
-    global r
+    r=readers() #list pc/sc readers
   
     # Display the list of readers
   

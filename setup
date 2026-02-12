@@ -1,6 +1,0 @@
-#!/bin/bash
-
-# install dependencies
-python -m pip install crcmod pyscard
-python ./assets/pynfcreader-master-fixed-2026-02/setup.py --user
-
