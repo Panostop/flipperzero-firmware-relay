@@ -27,7 +27,9 @@ To set up the Flipper :
 The ACR122 is not used twice because of restrictions in emulation mode.
 
 For this program to work, you will need to call it with root privileges because of
-    the pyscard module
+    the pyscard module. To do so, because of pyenv shims, call 
+    sudo $(which python) relay.py
+    to avoid sudo using it's own python environment
 
 
 This is the physical setup expected :
@@ -42,19 +44,17 @@ from smartcard.System import readers
 from smartcard.CardType import AnyCardType
 from smartcard.CardRequest import CardRequest
 from smartcard.util import toHexString
+from smartcard import PassThruCardService
 
-#we will need a shell subprocess to communicate with the Flipper
-from subprocess import * 
-import time
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
+#we will need a shell to get the card's information
+from subprocess import * 
+import time
 
 
-CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
-
-
-def getCardInfo():
+def getCardInfo() -> list[str]:
     """
     Uses the libnfc library to gather UID, ATQA and SAK from the card.
     """
@@ -72,7 +72,8 @@ def getCardInfo():
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
      
-        # filter the output to keep the info we need, deletes the first three lines and the las
+        # filter the output to keep the info we need, 
+        # deletes the first and last three lines (the two last empty lines count as one)
         #del CardInfoLines[0]
         #del CardInfoLines[0]
         #del CardInfoLines[0]
@@ -84,21 +85,60 @@ def getCardInfo():
     
     # ATQA / UID / SAK
     return CardInfoLines
-    
 
+def transfer_apdu(apdu: str, card: PassThruCardService) -> str:
+    print(f"apdu {apdu}")
+    card_response, sw1, sw2 = card.connection.transmit()
+    return card_response
+    
+class Emu(Iso14443ASession):
+    # inspired by gvinet's example on github.com/gvinet/pynfcreader at 
+    # examples/emu_flipper_zero_iso14443_a_relay.py
+
+    def __init__(self, cid=0, nad=0, drv=None, block_size=16, process_function=None, card=None):
+        Iso14443ASession.__init__(self, cid, nad, drv, block_size)
+        self._addCID = False
+        self.drv = self._drv
+        self.process_function = process_function
+        self.card = card
+
+    def run(self):
+        self.drv.start_emulation()
+        print("...go!")
+        self.low_level_dispatcher()
+
+    def low_level_dispatcher(self):
+        while 1:
+            received = self.drv.emu_get_cmd()
+            rtpdu = None
+            print(f"tpdu < {received}")
+            if received == "off":
+                print("field off")
+            elif received == "on":
+                print("field on")
+            else:
+                rtpdu=self.process_function(received, self.card)
+                print(f">>> rtdpu {rtpdu}\n")
+                self.drv.emu_send_resp(rtpdu.encode())
 
 def main():
-    r=readers() #list pc/sc readers
-  
+
+    reader_list=readers() #list pc/sc readers
+    CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
+
+    # Initialize and connect to the flipperZero
+    flipper = flipper_zero.FlipperZero("", debug=False)
+    flipper.connect()
+    flipper.set_mode_emu_iso14443A()
+
     # Display the list of readers
-  
     print("Available PC/SC readers :\n")
-    for i in range(len(r)):
-        print(f"\t-\t{r[i].name}")
+    for i in range(len(reader_list)):
+        print(f"\t-\t{reader_list[i].name}")
     print("")
 
-    if not len(r) == 1:
-        print(f"Need exactly 1 ACR122 to continue, {len(r)} readers available.")
+    if not len(reader_list) == 1 or not "ACR122" in reader_list[0].name:
+        print(f"Need exactly 1 ACR122 to continue, {len(reader_list)} readers available.")
         exit(1)
   
     # Now we want to wait for the presence of a card on the ACR122, 
@@ -106,18 +146,22 @@ def main():
   
     #configure the waitforcard() method to accept any cardType for 5s on the ACR122
     cardrequest = CardRequest(timeout=5, cardType=CARDTYPE) 
-    cardservice = cardrequest.waitforcard() # launch the waitforcard event
-
-    cardservice.connection.connect()
+    # launch the waitforcard event and connect to the card
+    card_to_emulate = cardrequest.waitforcard() 
+    card_to_emulate.connection.connect()
 
     card_info = getCardInfo() # [ATQA, UID, SAK]
+    print(f"This card will be emulated :\
+          \n\t - ATQA : {card_info[0]}\
+          \n\t - UID : {card_info[1]}\
+          \n\t - SAK : {card_info[2]}")
     
     for i in range(3):
-        card_info[i] = "".join(card_info[i].split()) #joins all the bytes in a continuous string for later
+        #joins all the bytes in a continuous string for later
+        card_info[i] = "".join(card_info[i].split()) 
     
-
-    
-
+    relay = Emu(drv=flipper, process_function=transfer_apdu, card=card_to_emulate)
+    relay.run()
 
 
 if __name__=='__main__':
