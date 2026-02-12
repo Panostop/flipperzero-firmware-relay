@@ -66,12 +66,12 @@ static void nfc_cli_print_usage(void) {
         printf("\tmode_15693\t\t - set mode ISO 15693\r\n");
         printf("\tmode_emu_14443_a\t - set mode ISO 14443 A\r\n");
         printf("\tmode_emu_14443_b\t - set mode ISO 14443 B\r\n");
-        printf("\tmode_emu_15693\t - set mode ISO 15693\r\n");
-        printf("\treqa\t - perform REQA in ISO 14443 A mode\r\n");
+        printf("\tmode_emu_15693\t\t - set mode ISO 15693\r\n");
+        printf("\treqa\t\t\t\t - perform REQA in ISO 14443 A mode\r\n");
         printf("\tsend <add_crc:in> <cmd:he>\t - send command\r\n");
         printf("\tset_uid <UID> (format XX XX ...) - set the UID for the emulated tag\r\n");
-        printf("\tset_atqa <ATQA> (format XX XX)\t\t - set the ATQA for the emulated tag\r\n");
-        printf("\tset_sak <SAK> (format XX)\t\t - set the SAK for the emulated tag\r\n");
+        printf("\tset_atqa <ATQA> (format XX XX)\t - set the ATQA for the emulated tag\r\n");
+        printf("\tset_sak <SAK> (format XX)\t - set the SAK for the emulated tag\r\n");
         printf("\trun_emu\t\t\t\t - run emulation for the configured tag\r\n");
 		
     }
