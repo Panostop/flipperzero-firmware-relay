@@ -3,4 +3,3 @@
 ./fbt -c
 ./fbt
 ./fbt flash_usb
-echo 'yo'

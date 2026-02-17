@@ -142,7 +142,7 @@ void cli_nl(Cli* cli) {
 
 void cli_prompt(Cli* cli) {
     UNUSED(cli);
-    printf(">: %s", furi_string_get_cstr(cli->line));
+    printf("\r\n>: %s", furi_string_get_cstr(cli->line));
     fflush(stdout);
 }
 

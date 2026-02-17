@@ -167,9 +167,9 @@ def main():
         #joins all the bytes in a continuous string for later
         card_info[i] = "".join(card_info[i].split()) 
     
-    flipper.set_atqa(card_info[0])
-    flipper.set_uid(card_info[1])
-    flipper.set_sak(card_info[2])
+    #flipper.set_atqa(card_info[0])
+    #flipper.set_uid(card_info[1])
+    #flipper.set_sak(card_info[2])
 
     relay = Emu(drv=flipper, process_function=transfer_apdu, card=connection)
     relay.run()
