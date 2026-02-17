@@ -107,6 +107,97 @@ def transfer_apdu(apdu: str, card: PassThruCardService) -> str:
     return card_response
     
 class Emu(Iso14443ASession):
+    def __init__(self, cid=0, nad=0, drv=None, block_size=16, process_function=None, reader=None):
+        Iso14443ASession.__init__(self, cid, nad, drv, block_size)
+        self._addCID = False
+        self.drv = self._drv
+        self.process_function = self.process_apdu
+        self._pcb_block_number: int = 1
+        # Set to one for an ICC
+        self._iblock_pcb_number = 1
+        self.iblock_resp_lst = []
+        self.reader = reader
+        if self.reader:
+            self.reader.connect()
+
+    def run(self):
+        self.drv.start_emulation()
+        print("...go!")
+        self.low_level_dispatcher()
+
+    def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
+        print("r block")
+        if tpdu == "BA00BED9":
+            rtpdu, crc = "BA00", True
+
+        elif tpdu.pcb in [0xA2, 0xA3, 0xB2, 0xB3]:
+            if len(self.iblock_resp_lst):
+                rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+            else:
+                rtpdu = self.build_rblock(ack=True).hex()
+                crc = True
+
+        return rtpdu, crc
+
+    def field_off(self):
+        print("field off")
+        if self.reader:
+            self.reader.field_off()
+
+    def field_on(self):
+        print("field on")
+        if self.reader:
+            self.reader.field_on()
+
+    def process_apdu(self, apdu):
+        if self.reader:
+            return self.reader.process_apdu(apdu)
+        else:
+            self.process_function(apdu)
+
+    def low_level_dispatcher(self):
+        capdu = bytes()
+        ats_sent = False
+
+        iblock_resp_lst = []
+
+        while 1:
+            r = self.drv.emu_get_cmd()
+            rtpdu = None
+            print(f"tpdu < {r}")
+            if r == "off":
+                self.field_off()
+            elif r == "on":
+                self.field_on()
+                ats_sent = False
+            else:
+                tpdu = Tpdu(bytes.fromhex(r))
+
+                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
+                    rtpdu, crc = "0A788082022063CBA3A0", True
+                    ats_sent = True
+                elif tpdu.r:
+                    rtpdu, crc = self.rblock_process(tpdu)
+                elif tpdu.s:
+                    print("s block")
+                    # Deselect
+                    if len(tpdu._inf_field) == 0:
+                        rtpdu, crc = "C2E0B4", False
+                    # Otherwise, it is a WTX
+
+                elif tpdu.i:
+                    print("i block")
+                    capdu += tpdu.inf
+
+                    if tpdu.is_chaining() is False:
+                        rapdu = self.process_function(capdu)
+                        capdu = bytes()
+                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
+                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+
+                print(f">>> rtdpu {rtpdu}\n")
+                self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
+    """
     # inspired by gvinet's example on github.com/gvinet/pynfcreader at 
     # examples/emu_flipper_zero_iso14443_a_relay.py
 
@@ -142,7 +233,7 @@ class Emu(Iso14443ASession):
 
     def low_level_dispatcher(self):
         while 1:
-            """
+            
             received = self.drv.emu_get_cmd()
             rtpdu = None
             print(f"Flipper < {received}")
@@ -184,41 +275,7 @@ class Emu(Iso14443ASession):
                 print(f">>> rtdpu {rtpdu}\n")
                 self.drv.emu_send_resp(rtpdu.encode())
                 """
-            r = self.drv.emu_get_cmd()
-            rtpdu = None
-            print(f"tpdu < {r}")
-            if r == "off":
-                print("field off")
-            elif r == "on":
-                print("field on")
-                ats_sent = False
-            else:
-                tpdu = Tpdu(bytes.fromhex(r))
-
-                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
-                    rtpdu, crc = "0A788082022063CBA3A0", True
-                    ats_sent = True
-                elif tpdu.r:
-                    rtpdu, crc = self.rblock_process(tpdu)
-                elif tpdu.s:
-                    print("s block")
-                    # Deselect
-                    if len(tpdu._inf_field) == 0:
-                        rtpdu, crc = "C2E0B4", False
-                    # Otherwise, it is a WTX
-
-                elif tpdu.i:
-                    print("i block")
-                    capdu += tpdu.inf
-
-                    if tpdu.is_chaining() is False:
-                        rapdu = self.process_function(capdu)
-                        capdu = bytes()
-                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
-                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
-
-                print(f">>> rtdpu {rtpdu}\n")
-                self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
+            
 
 def main():
 
