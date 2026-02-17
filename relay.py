@@ -48,6 +48,7 @@ from smartcard import PassThruCardService
 
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
+from pynfcreader.sessions.iso14443.tpdu import Tpdu
 
 #we will need a shell to get the card's information
 from subprocess import * 
@@ -122,7 +123,7 @@ class Emu(Iso14443ASession):
 
     def low_level_dispatcher(self):
         while 1:
-            received = flipper.emu_get_cmd()
+            received = self.drv.emu_get_cmd()
             rtpdu = None
             print(f"tpdu < {received}")
             if received == "off":
@@ -130,6 +131,11 @@ class Emu(Iso14443ASession):
             elif received == "on":
                 print("field on")
             else:
+                tpdu = Tpdu(bytes.fromhex(r))
+
+                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
+                    rtpdu, crc = "0A788082022063CBA3A0", True
+                    ats_sent = True
                 rtpdu=self.process_function(received, self.card)
                 print(f">>> rtdpu {rtpdu}\n")
                 self.drv.emu_send_resp(rtpdu.encode())
