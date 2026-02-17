@@ -303,8 +303,8 @@ def main():
     card_info = getCardInfo() # [ATQA, UID, SAK]
     print(f"This card will be emulated :\
           \n\t - ATQA : {card_info[0]}\
-          \n\t - UID : {card_info[1]}\
-          \n\t - SAK : {card_info[2]}")
+          \n\t - UID  : {card_info[1]}\
+          \n\t - SAK  : {card_info[2]}")
     
     for i in range(3):
         #joins all the bytes in a continuous string for later
