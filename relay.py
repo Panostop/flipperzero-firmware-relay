@@ -49,6 +49,7 @@ from smartcard import PassThruCardService
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
+from typing import Tuple
 
 #we will need a shell to get the card's information
 from subprocess import * 
@@ -114,7 +115,25 @@ class Emu(Iso14443ASession):
         self._addCID = False
         self.drv = self._drv
         self.process_function = process_function
+        self._pcb_block_number: int = 1
+        # Set to one for an ICC
+        self._iblock_pcb_number = 1
+        self.iblock_resp_lst = []
         self.card = card
+    
+    def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
+        print("r block")
+        if tpdu == "BA00BED9":
+            rtpdu, crc = "BA00", True
+
+        elif tpdu.pcb in [0xA2, 0xA3, 0xB2, 0xB3]:
+            if len(self.iblock_resp_lst):
+                rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+            else:
+                rtpdu = self.build_rblock(ack=True).hex()
+                crc = True
+        
+        return rtpdu, crc
 
     def run(self):
         self.drv.start_emulation()
