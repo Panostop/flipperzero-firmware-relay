@@ -102,7 +102,14 @@ def getCardInfo() -> list[str]:
 
 def transfer_apdu(apdu: str, card: PassThruCardService) -> str:
     print(f"apdu {apdu}")
-    card_response, sw1, sw2 = card.transmit(apdu)
+    
+    # e.g. "010AFF" --> [0x01, 0x0A, 0xFF] for the transmit method
+    #iloveonelinersfromhell
+
+    # 'i' steps 2 characters by 2 through 'apdu'
+    # creates a list with each elt being the int conversion of the character n°i and i+1 concatenated
+    apdulist = [ int(list(apdu)[i]+list(apdu)[i+1], 16) for i in range(0,len(apdu),2) ]
+    card_response, sw1, sw2 = card.transmit(apdulist)
     return card_response
     
 class Emu(Iso14443ASession):
