@@ -102,7 +102,7 @@ def getCardInfo() -> list[str]:
 
 def transfer_apdu(apdu: str, card: PassThruCardService) -> str:
     print(f"apdu {apdu}")
-    card_response, sw1, sw2 = card.transmit()
+    card_response, sw1, sw2 = card.transmit(apdu)
     return card_response
     
 class Emu(Iso14443ASession):
