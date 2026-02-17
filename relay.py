@@ -188,9 +188,9 @@ class Emu(Iso14443ASession):
             rtpdu = None
             print(f"tpdu < {r}")
             if r == "off":
-                self.field_off()
+                print("field off")
             elif r == "on":
-                self.field_on()
+                print("field on")
                 ats_sent = False
             else:
                 tpdu = Tpdu(bytes.fromhex(r))
