@@ -85,14 +85,6 @@ def getCardInfo() -> list[str]:
     
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
-     
-        # filter the output to keep the info we need, 
-        # deletes the first and last three lines (the two last empty lines count as one)
-        #del CardInfoLines[0]
-        #del CardInfoLines[0]
-        #del CardInfoLines[0]
-        #del CardInfoLines[-1]
-        #del CardInfoLines[-1]
         
         # keep only the second half for the lines we need (the actual values after the ': ')
         CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3, 6)]
@@ -132,19 +124,42 @@ class Emu(Iso14443ASession):
         while 1:
             received = self.drv.emu_get_cmd()
             rtpdu = None
-            print(f"tpdu < {received}")
+            print(f"Flipper < {received}")
+
             if received == "off":
                 print("field off")
+
             elif received == "on":
                 print("field on")
+                ats_sent = False
+
             else:
+                #real apdu commands
                 tpdu = Tpdu(bytes.fromhex(received))
 
                 if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
                     rtpdu, crc = "0A788082022063CBA3A0", True
                     ats_sent = True
-                else:
-                    rtpdu=self.process_function(received, self.card)
+                elif tpdu.r:
+                    rtpdu, crc = self.rblock_process(tpdu)
+                elif tpdu.s:
+                    print("s block")
+                    # Deselect
+                    if len(tpdu._inf_field) == 0:
+                        rtpdu, crc = "C2E0B4", False
+                    # Otherwise, it is a WTX
+
+                elif tpdu.i:
+                    print("i block")
+                    capdu += tpdu.inf
+
+                    if tpdu.is_chaining() is False:
+                        rapdu = self.process_function(capdu)
+                        capdu = bytes()
+                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
+                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+                
+
                 print(f">>> rtdpu {rtpdu}\n")
                 self.drv.emu_send_resp(rtpdu.encode())
 
