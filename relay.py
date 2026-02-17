@@ -173,7 +173,7 @@ class Emu(Iso14443ASession):
             else:
                 tpdu = Tpdu(bytes.fromhex(r))
 
-                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
+                if (tpdu.tpdu[0] == 0xE0 or tpdu.tpdu[0] == 0x50) and (ats_sent is False):
                     rtpdu, crc = "0A788082022063CBA3A0", True
                     ats_sent = True
                 elif tpdu.r:
