@@ -131,12 +131,13 @@ class Emu(Iso14443ASession):
             elif received == "on":
                 print("field on")
             else:
-                tpdu = Tpdu(bytes.fromhex(r))
+                tpdu = Tpdu(bytes.fromhex(received))
 
                 if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
                     rtpdu, crc = "0A788082022063CBA3A0", True
                     ats_sent = True
-                rtpdu=self.process_function(received, self.card)
+                else:
+                    rtpdu=self.process_function(received, self.card)
                 print(f">>> rtdpu {rtpdu}\n")
                 self.drv.emu_send_resp(rtpdu.encode())
 
