@@ -39,7 +39,7 @@ This is the physical setup expected :
 
 '''
 
-
+import time
 from smartcard.System import readers
 from smartcard.CardType import AnyCardType
 from smartcard.CardRequest import CardRequest
@@ -102,6 +102,7 @@ def transfer_apdu(apdu: str, card: PassThruCardService) -> str:
     # creates a list with each elt being the int conversion of the character n°i and i+1 concatenated
     apdulist = [ int(list(apdu)[i]+list(apdu)[i+1], 16) for i in range(0,len(apdu),2) ]
     card_response, sw1, sw2 = card.transmit(apdulist)
+    print(card_response, sw1, sw2)
     return card_response
     
 class Emu(Iso14443ASession):
