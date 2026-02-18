@@ -164,7 +164,7 @@ class Emu(Iso14443ASession):
 
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
         print("r block")
-        if tpdu.tpdu == b"\xBA\x00\xBE\xD9":
+        if tpdu.tpdu == [0xBA, 0x00, 0xBE, 0xD9]:
             rtpdu, crc = "BA00", True
 
         elif tpdu.pcb in [0xA2, 0xA3, 0xB2, 0xB3]:
@@ -200,16 +200,17 @@ class Emu(Iso14443ASession):
         iblock_resp_lst = []
 
         while 1:
-            r = self.drv.emu_get_cmd()
+            received = self.drv.emu_get_cmd()
             rtpdu = None
-            print(f"tpdu < {r}")
-            if r == "off":
+            print(f"tpdu < {received}")
+
+            if received == "off":
                 self.field_off()
-            elif r == "on":
+            elif received == "on":
                 self.field_on()
                 ats_sent = False
             else:
-                tpdu = Tpdu(bytes.fromhex(r))
+                tpdu = Tpdu(bytes.fromhex(received))
 
                 if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
                     rtpdu, crc = "0A788082022063CBA3A0", True
