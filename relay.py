@@ -443,7 +443,7 @@ def main():
     flipper.set_uid(card_info[1])
     flipper.set_sak(card_info[2])
 
-    relay = Emu(drv=flipper, process_function=transfer_apdu, reader=connection)
+    relay = Emu(drv=flipper, process_function=transfer_apdu, reader=ACR122)
     relay.run()
 
 
