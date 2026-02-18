@@ -170,7 +170,7 @@ class Emu(Iso14443ASession):
         self.low_level_dispatcher()
 
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
-        print(tpdu._tpdu)
+        print(tpdu.tpdu)
         print("r block")
         if tpdu.t == "BA00BED9":
             rtpdu, crc = "BA00", True
