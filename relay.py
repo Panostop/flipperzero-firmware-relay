@@ -242,7 +242,7 @@ class Emu(Iso14443ASession):
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
 
-pcsc_reader = PCSCReader()
+pcsc_reader = PCSCReader('ACR122')
 
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
