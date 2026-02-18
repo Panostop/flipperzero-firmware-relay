@@ -242,7 +242,8 @@ class Emu(Iso14443ASession):
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == None:
                     self.drv.emu_send_resp(b'\x09')
-                self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
+                else:
+                    self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
 
 pcsc_reader = PCSCReader()
