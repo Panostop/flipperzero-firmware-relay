@@ -82,7 +82,9 @@ import sys
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
+
 from smartcard.System import readers
+from smartcard.CardType import AnyCardType
 
 #we will need a shell to get the card's information
 from subprocess import * 
@@ -102,18 +104,20 @@ class PCSCReader():
         pass
 
     def connect(self):
-        available_readers = readers()
+        reader_list=readers() #list pc/sc readers
+        CARDTYPE = AnyCardType() #cardtype object for when we will look for the Access Card
+        # Display the list of readers
+        print("Available PC/SC readers :\n")
+        for i in range(len(reader_list)):
+            print(f"\t-\t{reader_list[i].name}")
+        print("")
 
-        if len(available_readers) == 0:
-            print("No card reader avaible.")
-            sys.exit(1)
-
-        # We use the first detected reader
-        reader = available_readers[0]
-        print(f"Reader detected : {reader}")
-
+        if not len(reader_list) == 1 or not self.readername in reader_list[0].name:
+            print(f"Need exactly 1 {self.readername} to continue, {len(reader_list)} readers available.")
+            exit(1)
+        
         # Se connecter à la carte
-        self.connection = reader.createConnection()
+        self.connection = reader_list[0].createConnection()
         self.connection.connect()
 
     def process_apdu(self, data: bytes) -> bytes:
