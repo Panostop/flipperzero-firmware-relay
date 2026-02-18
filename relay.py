@@ -170,6 +170,7 @@ class Emu(Iso14443ASession):
         self.low_level_dispatcher()
 
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
+        print(tpdu)
         print("r block")
         if tpdu == "BA00BED9":
             rtpdu, crc = "BA00", True
@@ -207,7 +208,7 @@ class Emu(Iso14443ASession):
 
         while 1:
             r = self.drv.emu_get_cmd()
-            rtpdu = ""
+            rtpdu = None
             print(f"tpdu < {r}")
             if r == "off":
                 self.field_off()
