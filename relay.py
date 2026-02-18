@@ -242,6 +242,7 @@ class Emu(Iso14443ASession):
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == None:
                     self.drv.emu_send_resp(b'\x09')
+                    break
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
