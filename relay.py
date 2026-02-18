@@ -134,17 +134,17 @@ flipper.connect()
 flipper.set_mode_emu_iso14443A()
 
 
-def process_apdu(cmd: str):
+"""def process_apdu(cmd: str):
     print(f"apdu {cmd}")
     if cmd == "00a404000e325041592e5359532e444446303100":
         rapdu = "6F57840E325041592E5359532E4444463031A545BF0C42611B4F07A0000000421010500243428701019F2808400200000000000061234F07A0000000041010500A4D4153544552434152448701029F280840002000000000009000"
     else:
         rapdu = "6F00"
     return rapdu
-
+"""
 
 class Emu(Iso14443ASession):
-    def __init__(self, cid=0, nad=0, drv=None, block_size=16, process_function=None, reader=None):
+    def __init__(self, cid=0, nad=0, drv=None, block_size=16, reader=None):
         Iso14443ASession.__init__(self, cid, nad, drv, block_size)
         self._addCID = False
         self.drv = self._drv
