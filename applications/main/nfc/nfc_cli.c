@@ -571,7 +571,7 @@ static void nfc_cli(Cli* cli, FuriString* args, void* context) {
                 break;
             } else if(furi_string_cmp_str(cli_cmd, "run_emu") == 0) {
                 nfc_run_emu(cli);
-                do_free = false;
+                //do_free = false;
                 break;
             }
         }
