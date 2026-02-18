@@ -207,7 +207,7 @@ class Emu(Iso14443ASession):
 
         while 1:
             r = fz.emu_get_cmd()
-            rtpdu = None
+            rtpdu = ""
             print(f"tpdu < {r}")
             if r == "off":
                 self.field_off()
