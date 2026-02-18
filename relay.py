@@ -173,7 +173,7 @@ class Emu(Iso14443ASession): #à retravailler
         iblock_resp_lst = []
 
         while 1:
-            r = self.drv.emu_get_cmd()
+            r = flipper.emu_get_cmd()
             rtpdu = None
             print(f"tpdu < {r}")
             if r == "off":
@@ -207,7 +207,7 @@ class Emu(Iso14443ASession): #à retravailler
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
 
                 print(f">>> rtdpu {rtpdu}\n")
-                self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
+                flipper.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
 def getCardInfo() -> list[str]:
     """
