@@ -91,7 +91,8 @@ from subprocess import *
 
 
 class PCSCReader():
-    def __init__(self):
+    def __init__(self, readername: str):
+        self.readername = readername
         pass
 
     def field_off(self):
