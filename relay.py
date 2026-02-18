@@ -190,7 +190,8 @@ class Emu(Iso14443ASession):
         if self.reader:
             return self.reader.process_apdu(apdu)
         else:
-            self.process_function(apdu)
+            print("No reader initialized for this emulator")
+            exit(1)
 
     def low_level_dispatcher(self):
         capdu = bytes()
