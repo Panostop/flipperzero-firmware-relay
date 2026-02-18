@@ -136,9 +136,9 @@ class PCSCReader(Reader):
         return resp
 
 
-fz = flipper_zero.FlipperZero("", debug=False)
-fz.connect()
-fz.set_mode_emu_iso14443A()
+flipper = flipper_zero.FlipperZero("", debug=False)
+flipper.connect()
+flipper.set_mode_emu_iso14443A()
 
 
 def process_apdu(cmd: str):
@@ -245,7 +245,7 @@ class Emu(Iso14443ASession):
 
 pcsc_reader = PCSCReader()
 
-emu = Emu(drv=fz, reader=pcsc_reader)
+emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
 
 
