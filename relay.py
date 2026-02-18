@@ -160,11 +160,11 @@ class Emu(Iso14443ASession):
                 self.reader.connect()
             except NoCardException:
                 print("No card on the connected reader")
-            exit(7143)
+            sys.exit(7143)
 
         else:
             print("No reader initialized for this emulator")
-            exit(7143)
+            sys.exit(7143)
 
     def run(self):
         self.drv.start_emulation()
