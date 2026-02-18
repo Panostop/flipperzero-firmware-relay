@@ -206,7 +206,7 @@ class Emu(Iso14443ASession):
         iblock_resp_lst = []
 
         while 1:
-            r = fz.emu_get_cmd()
+            r = self.drv.emu_get_cmd()
             rtpdu = ""
             print(f"tpdu < {r}")
             if r == "off":
@@ -240,7 +240,7 @@ class Emu(Iso14443ASession):
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
 
                 print(f">>> rtdpu {rtpdu}\n")
-                fz.emu_send_resp(bytes.fromhex(rtpdu), crc)
+                self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
 
 pcsc_reader = PCSCReader()
