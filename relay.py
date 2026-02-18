@@ -1,9 +1,26 @@
-""### relay.py
+### relay.py
 '''
 DISCLAIMER : This program was created for research and educational purposes only with 
     no warranty whatsoever.
 
 Copyright (C) 2026 Solal TESSIER
+
+Part of this code was inspired by Guillaume VINET (gvinet)'s 
+    example code for his python lib pynfcreader : pynfcreader.examples.emu_flipper_zero_iso14443_a_relay.py
+
+    Copyright (C) 2015-2024 Guillaume VINET
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
 
 Using the pyscard (smartcard) module, the goal is to simulate a NFC relay attack between
     a legitimate reader and a legitimate access card to grant access to a building
@@ -11,69 +28,37 @@ Using the pyscard (smartcard) module, the goal is to simulate a NFC relay attack
     an ACR-122 and a FlipperZero with modded firmware by gvinet on GitHub. To run this,
     you will also need to download and compile the libnfc library.
 I have forked gvinet's repo to add a few upgrades
-    (https://github.com/Panostop/flipperzero-firmware-relay). 
+    (https://github.com/Panostop/flipperzero-firmware-relay).
+
 
 
 To set up the Flipper :
     - Plug it into the Raspberry Pi
     - run : 
-        - git clone "https://github.com/Panostop/flipperzero-firmware-relay.git" 
-        - cd flipperzero-firmware-relay
+        $ git clone "https://github.com/Panostop/flipperzero-firmware-relay.git" 
+        $ cd flipperzero-firmware-relay
 
-        # this script can be used each time you need it, it cleans, compiles and flashes the flipper
-        - ./flasher
+        # the following script can be used each time you need it, it cleans, compiles and flashes the flipper
+        $ ./flasher
+
     - wait for the build and installation to finish on the Flipper (can take a while)
 
 The ACR122 is not used twice because of restrictions in emulation mode.
 
 For this program to work, you will need to call it with root privileges because of
-    the pyscard module. To do so, because of pyenv shims, call 
-    sudo $(which python) relay.py
-    to avoid sudo using it's own python environment
+    the pyscard module. To do so, if you use pyenv and because of pyenv shims, call 
+    
+    $ sudo $(which python) relay.py
+    
+    to avoid sudo using its own python environment
 
 
 This is the physical setup expected (the Access Card must be placed before start):
 
     [Access Card].))  ((.[ACR-122U]---[RasPi]---[FlipperZero].))  ((.[Reader]
 
-
 '''
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Copyright (C) 2015-2024 Guillaume VINET
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import time
 from typing import Tuple
@@ -117,7 +102,12 @@ class PCSCReader():
         
         #connect to the card
         self.connection = reader_list[0].createConnection()
-        self.connection.connect()
+        try :
+            self.connection.connect()
+        except NoCardException:
+                print("No card on the connected reader")
+                exit(7143)
+        
         
 
     def process_apdu(self, data: bytes) -> bytes:
@@ -129,6 +119,29 @@ class PCSCReader():
         print(f"apdu resp: {resp.hex()}")
         return resp
 
+def getCardInfo() -> list[str]:
+    """
+    Uses the libnfc C library to gather UID, ATQA and SAK from the card.
+    """
+    
+    # Used files for better clarity and because of issues with pipes
+    with open("CardInfo.txt", "w") as CardInfo:
+        
+        # returns the full card info
+        CardInfo = Popen( ["nfc-list"], 
+                        stdout=CardInfo,
+                        stderr=PIPE,
+                        )
+        CardInfo.communicate() #wait for the output, it often takes a bit
+    
+    with open("CardInfo.txt", "r") as CardInfo:
+        CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
+        
+        # keep only the second half for the lines we need (the actual values after the ': ')
+        CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3, 6)]
+    
+    # ATQA / UID / SAK
+    return CardInfoLines
 
 class Emu(Iso14443ASession):
 
@@ -142,12 +155,7 @@ class Emu(Iso14443ASession):
         self.iblock_resp_lst = []
         self.reader = reader
         if self.reader:
-            try:
-                self.reader.connect()
-            except NoCardException:
-                print("No card on the connected reader")
-                exit(7143)
-
+            self.reader.connect()
         else:
             print("No reader initialized for this emulator")
             exit(7143)
@@ -240,6 +248,7 @@ flipper.connect()
 flipper.set_mode_emu_iso14443A()
 
 pcsc_reader = PCSCReader('ACR122')
+
 
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
