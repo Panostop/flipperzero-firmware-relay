@@ -129,20 +129,6 @@ class PCSCReader():
         print(f"apdu resp: {resp.hex()}")
         return resp
 
-#initialize the FlipperZero instance and connection
-flipper = flipper_zero.FlipperZero("", debug=False)
-flipper.connect()
-flipper.set_mode_emu_iso14443A()
-
-
-"""def process_apdu(cmd: str):
-    print(f"apdu {cmd}")
-    if cmd == "00a404000e325041592e5359532e444446303100":
-        rapdu = "6F57840E325041592E5359532E4444463031A545BF0C42611B4F07A0000000421010500243428701019F2808400200000000000061234F07A0000000041010500A4D4153544552434152448701029F280840002000000000009000"
-    else:
-        rapdu = "6F00"
-    return rapdu
-"""
 
 class Emu(Iso14443ASession):
 
@@ -160,11 +146,11 @@ class Emu(Iso14443ASession):
                 self.reader.connect()
             except NoCardException:
                 print("No card on the connected reader")
-                sys.exit(7143)
+                exit(7143)
 
         else:
             print("No reader initialized for this emulator")
-            sys.exit(7143)
+            exit(7143)
 
     def run(self):
         self.drv.start_emulation()
@@ -248,11 +234,16 @@ class Emu(Iso14443ASession):
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
+#initialize the FlipperZero instance and connection
+flipper = flipper_zero.FlipperZero("", debug=False)
+flipper.connect()
+flipper.set_mode_emu_iso14443A()
 
 pcsc_reader = PCSCReader('ACR122')
 
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
+
 
 
 
