@@ -170,7 +170,6 @@ class Emu(Iso14443ASession):
         self.low_level_dispatcher()
 
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
-        print(tpdu.inf)
         print("r block")
         if tpdu.tpdu == b"\xBA\x00\xBE\xD9":
             rtpdu, crc = "BA00", True
@@ -241,6 +240,8 @@ class Emu(Iso14443ASession):
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
 
                 print(f">>> rtdpu {rtpdu}\n")
+                if rtpdu == None:
+                    self.drv.emu_send_resp(b'\x9')
                 self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
 
