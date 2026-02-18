@@ -90,8 +90,6 @@ from smartcard.CardType import AnyCardType
 from subprocess import * 
 
 
-
-
 class PCSCReader():
     def __init__(self, readername: str):
         self.readername = readername
@@ -123,14 +121,14 @@ class PCSCReader():
     def process_apdu(self, data: bytes) -> bytes:
         print(f"apdu cmd: {data.hex()}")
 
-        if data.hex() == "00b2010c00":
+        """if data.hex() == "00b2010c00":
             resp = bytes.fromhex("70759f6c0200019f650200709f66020e0e9f6b136132770025856368d15062019000990000000f9f670103563442353133323737303032353835363336385e202f5e313530363230313333303030333333303030323232323230303031313131309f62060000003800009f630600000000e0e09f6401039000")
         elif data.hex() == "00b2011400":
             resp = bytes.fromhex(
                 "7081a057136132770025856368d15062016583976410000f5a0861327700258563685f24031506305f25031305015f280202505f3401018c219f02069f03069f1a0295055f2a029a039c019f37049f35019f45029f4c089f34038d0c910a8a0295059f37049f4c088e0e00000000000000005e0342031f039f0702ff009f080200029f0d05b0000480009f0e050470a800009f0f05b0000480009f420209789f4a01829000")
-        else:
-            data, sw1, sw2 = self.connection.transmit(list(data))
-            resp = bytes(data + [sw1, sw2])
+        else:"""
+        data, sw1, sw2 = self.connection.transmit(list(data))
+        resp = bytes(data + [sw1, sw2])
         print(f"apdu resp: {resp.hex()}")
         return resp
 
