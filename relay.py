@@ -80,12 +80,7 @@ class PCSCReader():
         self.readername = readername
         pass
 
-    def field_off(self):
-        pass
-
-    def field_on(self):
-        pass
-
+    
     def connect(self):
         reader_list=readers() #list pc/sc readers
 
@@ -100,11 +95,11 @@ class PCSCReader():
             print(f"Need exactly 1 {self.readername} to continue, {len(reader_list)} readers available.")
             exit(1)
         
-        #connect to the card
-        self.connection = reader_list[0].createConnection()
+        #Card Connection
+        self.connection = reader_list[0].createConnection() # initialize reader connection
         try :
             self.connection.connect()
-        except NoCardException:
+        except NoCardException: #raised if no card is resent on the reader
                 print("No card on the connected reader")
                 exit(7143)
         
@@ -179,15 +174,6 @@ class Emu(Iso14443ASession):
 
         return rtpdu, crc
 
-    def field_off(self):
-        print("field off")
-        if self.reader:
-            self.reader.field_off()
-
-    def field_on(self):
-        print("field on")
-        if self.reader:
-            self.reader.field_on()
 
     def process_apdu(self, apdu):
         return self.reader.process_apdu(apdu)
@@ -205,9 +191,9 @@ class Emu(Iso14443ASession):
             print(f"tpdu < {received}")
 
             if received == "off":
-                self.field_off()
+                print("field off")
             elif received == "on":
-                self.field_on()
+                print("field on")
                 ats_sent = False
             else:
                 tpdu = Tpdu(bytes.fromhex(received))
