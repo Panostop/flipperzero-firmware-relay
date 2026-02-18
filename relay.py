@@ -76,34 +76,28 @@ This is the physical setup expected :
 # limitations under the License.
 
 import time
+from typing import Tuple
+import sys
+
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
-from typing import Tuple
-import sys
 from smartcard.System import readers
 
+#we will need a shell to get the card's information
+from subprocess import * 
 
-class Reader():
 
+
+
+class PCSCReader():
     def __init__(self):
-        pass
-
-    def connect(self):
         pass
 
     def field_off(self):
         pass
 
     def field_on(self):
-        pass
-
-    def process_apdu(self, data: str):
-        pass
-
-
-class PCSCReader(Reader):
-    def __init__(self):
         pass
 
     def connect(self):
