@@ -164,7 +164,7 @@ class Emu(Iso14443ASession):
 
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
         print("r block")
-        if tpdu.tpdu == [0xBA, 0x00, 0xBE, 0xD9]:
+        if tpdu.tpdu == b"\xBA\x00\xBE\xD9":
             rtpdu, crc = "BA00", True
 
         elif tpdu.pcb in [0xA2, 0xA3, 0xB2, 0xB3]:
