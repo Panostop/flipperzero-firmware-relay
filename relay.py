@@ -84,7 +84,7 @@ from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
 from smartcard.System import readers
-from smartcard.CardType import AnyCardType
+from smartcard.Exceptions import NoCardException
 
 #we will need a shell to get the card's information
 from subprocess import * 
@@ -118,6 +118,7 @@ class PCSCReader():
         #connect to the card
         self.connection = reader_list[0].createConnection()
         self.connection.connect()
+        
 
     def process_apdu(self, data: bytes) -> bytes:
         print(f"apdu cmd: {data.hex()}")
@@ -144,18 +145,26 @@ flipper.set_mode_emu_iso14443A()
 """
 
 class Emu(Iso14443ASession):
+
     def __init__(self, cid=0, nad=0, drv=None, block_size=16, reader=None):
         Iso14443ASession.__init__(self, cid, nad, drv, block_size)
         self._addCID = False
         self.drv = self._drv
-        self.process_function = self.process_apdu
         self._pcb_block_number: int = 1
         # Set to one for an ICC
         self._iblock_pcb_number = 1
         self.iblock_resp_lst = []
         self.reader = reader
         if self.reader:
-            self.reader.connect()
+            try:
+                self.reader.connect()
+            except NoCardException:
+                print("No card on the connected reader")
+            exit(7143)
+
+        else:
+            print("No reader initialized for this emulator")
+            exit(7143)
 
     def run(self):
         self.drv.start_emulation()
@@ -187,11 +196,8 @@ class Emu(Iso14443ASession):
             self.reader.field_on()
 
     def process_apdu(self, apdu):
-        if self.reader:
-            return self.reader.process_apdu(apdu)
-        else:
-            print("No reader initialized for this emulator")
-            exit(1)
+        return self.reader.process_apdu(apdu)
+        
 
     def low_level_dispatcher(self):
         capdu = bytes()
@@ -215,8 +221,10 @@ class Emu(Iso14443ASession):
                 if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
                     rtpdu, crc = "0A788082022063CBA3A0", True
                     ats_sent = True
+
                 elif tpdu.r:
                     rtpdu, crc = self.rblock_process(tpdu)
+                
                 elif tpdu.s:
                     print("s block")
                     # Deselect
@@ -227,9 +235,8 @@ class Emu(Iso14443ASession):
                 elif tpdu.i:
                     print("i block")
                     capdu += tpdu.inf
-
                     if tpdu.is_chaining() is False:
-                        rapdu = self.process_function(capdu)
+                        rapdu = self.process_apdu(capdu)
                         capdu = bytes()
                         self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
