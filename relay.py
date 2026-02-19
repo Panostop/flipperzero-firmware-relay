@@ -132,6 +132,7 @@ def getCardInfo() -> list[str]:
                         )
         CardInfoCatcher.communicate() #wait for the output, it often takes a bit
         CardInfoCatcher.terminate()
+        time.sleep(1)
     
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
