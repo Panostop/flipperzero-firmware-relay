@@ -102,8 +102,9 @@ class PCSCReader():
             print("No card on the connected reader")
             exit(7143)
         except CardConnectionException:
-            print("waiting a bit")
+            print("retrying in a bit")
             time.sleep(1)
+            self.connect
         
         
 
