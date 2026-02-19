@@ -69,7 +69,7 @@ from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
 from smartcard.System import readers
-from smartcard.Exceptions import NoCardException
+from smartcard.Exceptions import NoCardException, CardConnectionException
 
 #we will need a shell to get the card's information
 from subprocess import * 
@@ -80,7 +80,6 @@ class PCSCReader():
         self.readername = readername
         pass
 
-    
     def connect(self):
         reader_list=readers() #list pc/sc readers
 
@@ -100,8 +99,11 @@ class PCSCReader():
         try :
             self.connection.connect()
         except NoCardException: #raised if no card is resent on the reader
-                print("No card on the connected reader")
-                exit(7143)
+            print("No card on the connected reader")
+            exit(7143)
+        except CardConnectionException:
+            print("waiting a bit")
+            time.sleep(1)
         
         
 
@@ -250,7 +252,7 @@ card_info = getCardInfo() # [ATQA, UID, SAK]
 print(f"This card will be emulated :\
       \n\t - ATQA : {card_info[0]}\
       \n\t - UID  : {card_info[1]}\
-       \n\t - SAK  : {card_info[2]}")
+      \n\t - SAK  : {card_info[2]}")
 
 #flipper.set_atqa(card_info[0])
 #flipper.set_uid(card_info[1])
