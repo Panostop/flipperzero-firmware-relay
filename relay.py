@@ -174,6 +174,8 @@ class Emu(Iso14443ASession):
             else:
                 rtpdu = self.build_rblock(ack=True).hex()
                 crc = True
+        else:
+            rtpdu, crc = None, False
         
 
         return rtpdu, crc
@@ -187,7 +189,7 @@ class Emu(Iso14443ASession):
         capdu = bytes()
         ats_sent = False
 
-        iblock_resp_lst = []
+        self.iblock_resp_lst = []
 
         while 1:
             received = self.drv.emu_get_cmd()
@@ -240,16 +242,16 @@ flipper.set_mode_emu_iso14443A()
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 
 
-"""card_info = getCardInfo() # [ATQA, UID, SAK]
-print(f"This card will be emulated :\
-      \n\t - ATQA : {card_info[0]}\
-      \n\t - UID  : {card_info[1]}\
-      \n\t - SAK  : {card_info[2]}")
+#card_info = getCardInfo() # [ATQA, UID, SAK]
+#print(f"This card will be emulated :\
+      #\n\t - ATQA : {card_info[0]}\
+      #\n\t - UID  : {card_info[1]}\
+      #\n\t - SAK  : {card_info[2]}")
 
 #flipper.set_atqa(card_info[0])
 #flipper.set_uid(card_info[1])
 #flipper.set_sak(card_info[2])
-"""
+
 
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
