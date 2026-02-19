@@ -128,6 +128,7 @@ def getCardInfo() -> list[str]:
                         stderr=PIPE,
                         )
         CardInfoCatcher.communicate() #wait for the output, it often takes a bit
+        CardInfoCatcher.kill()
     
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
@@ -245,9 +246,9 @@ pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 
 card_info = getCardInfo() # [ATQA, UID, SAK]
 print(f"This card will be emulated :\
-      #\n\t - ATQA : {card_info[0]}\
-      #\n\t - UID  : {card_info[1]}\
-      #\n\t - SAK  : {card_info[2]}")
+      \n\t - ATQA : {card_info[0]}\
+      \n\t - UID  : {card_info[1]}\
+       \n\t - SAK  : {card_info[2]}")
 
 #flipper.set_atqa(card_info[0])
 #flipper.set_uid(card_info[1])
