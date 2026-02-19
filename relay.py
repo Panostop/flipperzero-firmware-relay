@@ -240,7 +240,7 @@ flipper.set_mode_emu_iso14443A()
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 
 
-card_info = getCardInfo() # [ATQA, UID, SAK]
+"""card_info = getCardInfo() # [ATQA, UID, SAK]
 print(f"This card will be emulated :\
       \n\t - ATQA : {card_info[0]}\
       \n\t - UID  : {card_info[1]}\
@@ -249,7 +249,7 @@ print(f"This card will be emulated :\
 #flipper.set_atqa(card_info[0])
 #flipper.set_uid(card_info[1])
 #flipper.set_sak(card_info[2])
-
+"""
 
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
