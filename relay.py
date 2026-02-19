@@ -134,6 +134,7 @@ def getCardInfo() -> list[str]:
         
         # keep only the second half for the lines we need (the actual values after the ': ')
         CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3, 6)]
+        print(CardInfoLines)
     
     # ATQA / UID / SAK
     return CardInfoLines
@@ -243,7 +244,7 @@ pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 
 
 card_info = getCardInfo() # [ATQA, UID, SAK]
-#print(f"This card will be emulated :\
+print(f"This card will be emulated :\
       #\n\t - ATQA : {card_info[0]}\
       #\n\t - UID  : {card_info[1]}\
       #\n\t - SAK  : {card_info[2]}")
