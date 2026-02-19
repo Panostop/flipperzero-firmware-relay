@@ -104,7 +104,7 @@ class PCSCReader():
         except CardConnectionException:
             print("retrying in a bit")
             time.sleep(1)
-            self.connect
+            self.connect()
         
         
 
