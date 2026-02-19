@@ -128,12 +128,14 @@ def getCardInfo() -> list[str]:
                         stderr=PIPE,
                         )
         CardInfoCatcher.communicate() #wait for the output, it often takes a bit
-        CardInfoCatcher.kill()
+        CardInfoCatcher.terminate()
     
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
         
+        #iloveonelinersfromhell
         # keep only the second half for the lines we need (the actual values after the ': ')
+        # then remove the spaces
         CardInfoLines = [''.join(CardInfoLines[i].split(': ')[1].split(' ')) for i in range(3, 6)]
         print(CardInfoLines)
     
