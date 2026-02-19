@@ -123,11 +123,11 @@ def getCardInfo() -> list[str]:
     with open("CardInfo.txt", "w") as CardInfo:
         
         # returns the full card info
-        CardInfo = Popen( ["nfc-list"], 
+        CardInfoCatcher = Popen( ["nfc-list"], 
                         stdout=CardInfo,
                         stderr=PIPE,
                         )
-        CardInfo.communicate() #wait for the output, it often takes a bit
+        CardInfoCatcher.communicate() #wait for the output, it often takes a bit
     
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
