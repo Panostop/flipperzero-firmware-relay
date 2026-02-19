@@ -133,7 +133,7 @@ def getCardInfo() -> list[str]:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
         
         # keep only the second half for the lines we need (the actual values after the ': ')
-        CardInfoLines = [CardInfoLines[i].split(': ')[1] for i in range(3, 6)]
+        CardInfoLines = [''.join(CardInfoLines[i].split(': ')[1].split(' ')) for i in range(3, 6)]
         print(CardInfoLines)
     
     # ATQA / UID / SAK
