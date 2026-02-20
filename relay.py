@@ -106,14 +106,12 @@ class PCSCReader():
             time.sleep(1)
             self.connect()
         
-        
-
-    def process_apdu(self, data: bytes) -> bytes:
-        print(f"apdu cmd: {data.hex()}")
+    def process_apdu(self, data_to_send: bytes) -> bytes:
+        print(f"apdu cmd: {data_to_send.hex()}")
 
         #send data to the card
-        data, sw1, sw2 = self.connection.transmit(list(data))
-        resp = bytes(data + [sw1, sw2])
+        data_received, sw1, sw2 = self.connection.transmit(list(data_to_send))
+        resp = bytes(data_received + [sw1, sw2])
         print(f"apdu resp: {resp.hex()}")
         return resp
 
@@ -131,8 +129,7 @@ def getCardInfo() -> list[str]:
                         stderr=PIPE,
                         )
         CardInfoCatcher.communicate() #wait for the output, it often takes a bit
-        CardInfoCatcher.terminate()
-        time.sleep(1)
+        
     
     with open("CardInfo.txt", "r") as CardInfo:
         CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
@@ -213,7 +210,7 @@ class Emu(Iso14443ASession):
                 tpdu = Tpdu(bytes.fromhex(received))
 
                 if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
-                    rtpdu, crc = "0A788082022063CBA3A0", True
+                    rtpdu, crc = "0A788082022063CBA3A0", True # l'ATS 
                     ats_sent = True
 
                 elif tpdu.r:
