@@ -194,7 +194,7 @@ class Emu(Iso14443ASession):
         capdu = bytes()
         ats_sent = False
 
-        self.iblock_resp_lst = []
+        iblock_resp_lst = []
 
         while 1:
             received = self.drv.emu_get_cmd()
