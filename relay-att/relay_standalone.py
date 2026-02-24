@@ -159,34 +159,6 @@ class Proxmark3Reader():
         self.terminal.close()
 
 
-def getCardInfo() -> list[str]:
-    """
-    Uses the libnfc C library to gather UID, ATQA and SAK from the card.
-    """
-    
-    # Used files for better clarity and because of issues with pipes
-    with open("CardInfo.txt", "w") as CardInfo:
-        
-        # returns the full card info
-        CardInfoCatcher = Popen( ["nfc-list"], 
-                        stdout=CardInfo,
-                        stderr=PIPE,
-                        )
-        CardInfoCatcher.communicate() #wait for the output, it often takes a bit
-        
-    
-    with open("CardInfo.txt", "r") as CardInfo:
-        CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
-        
-        #iloveonelinersfromhell
-        # keep only the second half for the lines we need (the actual values after the ': ')
-        # then remove the spaces
-        CardInfoLines = [''.join(CardInfoLines[i].split(': ')[1].split(' ')) for i in range(3, 6)]
-        print(CardInfoLines)
-    
-    # ATQA / UID / SAK
-    return CardInfoLines
-
 class Emu(Iso14443ASession):
 
     def __init__(self, cid=0, nad=0, drv=None, block_size=16, reader=None):
@@ -209,25 +181,24 @@ class Emu(Iso14443ASession):
         print("...go!")
         self.low_level_dispatcher()
 
-    def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
-        print("r block")
-        if tpdu.tpdu == b"\xBA\x00\xBE\xD9": #rare situation observed, might not be useful for you
-            rtpdu, crc = "BA00", True
-        
-        elif tpdu.tpdu == b"\xBB\x00\x66\xC0": #rare case observed, might not be useful for you
-            rtpdu, crc = "BB00", True
+    def setCardInfo(self):
+        ATS = None
+        card_data, has_ATS = self.reader.getCardInfo()
 
-        elif tpdu.pcb in [0xA2, 0xA3, 0xB2, 0xB3]:
-            if len(self.iblock_resp_lst):
-                rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
-            else:
-                rtpdu = self.build_rblock(ack=True).hex()
-                crc = True
-        else:
-            rtpdu, crc = None, False
+        print(f"This card will be emulated :",
+              "- UID  : {card_info[0]}",
+              "- ATQA : {card_info[1]}",
+              "- SAK  : {card_info[2]}",
+              sep='\n\t ',
+              end='\n'
+              )
         
+        self.drv.set_atqa(card_info[0])
+        self.drv.set_uid(card_info[1])
+        self.drv.set_sak(card_info[2])
 
-        return rtpdu, crc
+        return card_data[3] if has_ATS else None
+
 
 
     def process_apdu(self, apdu):
@@ -251,30 +222,7 @@ class Emu(Iso14443ASession):
                 print("field on")
                 ats_sent = False
             else:
-                tpdu = Tpdu(bytes.fromhex(received))
-
-                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
-                    rtpdu, crc = "0A788082022063CBA3A0", True # l'ATS 
-                    ats_sent = True
-
-                elif tpdu.r:
-                    rtpdu, crc = self.rblock_process(tpdu)
                 
-                elif tpdu.s:
-                    print("s block")
-                    # Deselect
-                    if len(tpdu._inf_field) == 0:
-                        rtpdu, crc = "C2E0B4", False
-                    # Otherwise, it is a WTX
-
-                elif tpdu.i:
-                    print("i block")
-                    capdu += tpdu.inf
-                    if tpdu.is_chaining() is False:
-                        rapdu = self.process_apdu(capdu)
-                        capdu = bytes()
-                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
-                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
 
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == None:
@@ -288,18 +236,18 @@ flipper = flipper_zero.FlipperZero("", debug=False)
 flipper.connect()
 flipper.set_mode_emu_iso14443A()
 
+PM3 = Proxmark3Reader() #initialize the reader and card connection
 
-card_info = getCardInfo() # [ATQA, UID, SAK]
+card_info, has_ATS = PM3.getCardInfo() # [UID, ATQA, SAK, *ATS]
+
 print(f"This card will be emulated :\
       \n\t - ATQA : {card_info[0]}\
       \n\t - UID  : {card_info[1]}\
       \n\t - SAK  : {card_info[2]}")
 
-#flipper.set_atqa(card_info[0])
-#flipper.set_uid(card_info[1])
-#flipper.set_sak(card_info[2])
 
 
-pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
-emu = Emu(drv=flipper, reader=pcsc_reader)
+
+
+emu = Emu(drv=flipper, reader=PM3)
 emu.run()
