@@ -1,4 +1,4 @@
-### relay.py
+### relay_old.py, only present to keep a trace of the older versions
 '''
 DISCLAIMER : This program was created for research and educational purposes only with 
     no warranty whatsoever.
@@ -62,7 +62,6 @@ This is the physical setup expected (the Access Card must be placed before start
 
 import time
 from typing import Tuple
-import sys
 
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
 from pynfcreader.devices import flipper_zero
@@ -100,7 +99,7 @@ class PCSCReader():
             self.connection.connect()
         except NoCardException: #raised if no card is resent on the reader
             print("No card on the connected reader")
-            exit(7143)
+            exit(4173)
         except CardConnectionException:
             print("retrying in a bit")
             time.sleep(1)
@@ -259,34 +258,6 @@ print(f"This card will be emulated :\
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
