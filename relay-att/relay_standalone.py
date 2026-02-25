@@ -72,7 +72,6 @@ class Proxmark3Reader():
     def __init__(self,):
         self.terminal = pexpect.spawn('pm3', encoding='utf-8') #initialize communication with the proxmark
         self.terminal.expect_exact("pm3 -->")#wait for first prompt
-        self.communication_initiated = False
 
 
     def getCardInfo(self) -> Tuple[list[str], bool]:
@@ -103,7 +102,10 @@ class Proxmark3Reader():
         #ILOVEONELINERSFROMHELL
         card_data = [i.split(': ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','') for i in self.terminal.before.split("\r\n")[:-2]]
         
-        
+        #if we are here we can be sure we have a card  to select
+        self.terminal.sendline(f"hf 14a raw -sk 00") #selects the card and keeps the selection active for later
+        self.terminal.expect_exact("pm3 -->") #wait until new prompt
+
         has_ATS =  len(card_data) == 4
         
         return card_data, has_ATS
@@ -120,10 +122,7 @@ class Proxmark3Reader():
         answer_has_crc= False
         options_string=[]
 
-        if not self.communication_initiated:
-            options_string.append("s") # proxmark option to select the card, use only once
-            self.communication_initiated = True
-        elif add_crc:
+        if add_crc:
             options_string.append("c") # proxmark option to automatically calculate and add CRC
 
         #proxmark command for raw data, option -k means keep card selected after receiving answer
