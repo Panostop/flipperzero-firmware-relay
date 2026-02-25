@@ -98,7 +98,7 @@ class Proxmark3Reader():
         #   and creates a list (card_data).                   | card_data = [
         #   for every line left,                              | i
         #   it keeps only what is after the two dots (:),     | .split(': ')[1]
-        #   and deletes the color formattings and spaces      | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','')
+        #   and deletes the ANSI color formattings and spaces | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','')
         
         #ILOVEONELINERSFROMHELL
         card_data = [i.split(': ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','') for i in self.terminal.before.split("\r\n")[:-2]]
@@ -141,12 +141,12 @@ class Proxmark3Reader():
             # The following oneliner takes the buffer,            | self.terminal.before
             #   splits it for every line,                         | .split("\r\n")
             #   keeps only the first line and on this line,       | [0]
-            #   it keeps only what is after the plus sign ([+]),  | .split('[\x1b[32m+\x1b[0m] ')[1]  #complex because of color codes
-            #   and deletes the color formattings and spaces      | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','')
-            #   Then, it splits into two parts : APDU and CRC     | .split('[')
+            #   it keeps only what is after the plus sign ([+]),  | .split('[\x1b[32m+\x1b[0m] ')[1]  #wierd looking because of color codes
+            #   and deletes the ANSI color formattings and spaces | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[31m', '').replace('\x1b[0m','')
+            #   Then, it splits into two parts : APDU and CRC     | .split('[')               \  GREEN  /             \   RED   /             \ WHITE /
             
             #ILOVEONELINERSFROMHELL
-            data = self.terminal.before.split('\r\n')[0].split('[\x1b[32m+\x1b[0m] ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','').split('[')
+            data = self.terminal.before.split('\r\n')[0].split('[\x1b[32m+\x1b[0m] ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[31m', '').replace('\x1b[0m','').split('[')
             data[-1] = data[-1].replace(']', '') #remove any trailing bracket on the last item, with or without CRC
             answer_has_crc = len(data)==2 # True if there are 2 items, AKA CRC present
         except:
@@ -203,7 +203,27 @@ class Emu(Iso14443ASession):
 
     def process_apdu(self, apdu:str, add_crc:bool) -> Tuple[list[str] | None, bool]:
         return self.reader.process_apdu(apdu, add_crc)
+    
+    def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
+        print("r block")
+        if tpdu.tpdu == b"\xBA\x00\xBE\xD9": #rare case observed, might not be useful for you
+            rtpdu, crc = "BA00", True
         
+        elif tpdu.tpdu == b"\xBB\x00\x66\xC0": #rare case observed, might not be useful for you
+            rtpdu, crc = "BB00", True
+
+        elif tpdu.pcb in [0xA2, 0xA3, 0xB2, 0xB3]:
+            if len(self.iblock_resp_lst):
+                rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+            else:
+                rtpdu = self.build_rblock(ack=True).hex()
+                crc = True
+        else:
+            rtpdu, crc = None, False
+        
+
+        return rtpdu, crc
+
     def low_level_dispatcher(self):
         capdu = bytes()
         ats_sent = False
@@ -223,11 +243,31 @@ class Emu(Iso14443ASession):
                 ats_sent = False
 
             else:
+                tpdu = Tpdu(bytes.fromhex(received))
 
-                #if an ATS is requested, we haven't sent is yet, and we have one :
-                if (received[:2] == "E0") and (ats_sent is False) and self.ATS:
+                #if it looks like an ATS req, we haven't sent is yet, and we have one :
+                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False) and self.ATS:
                     rtpdu, crc = self.ATS, True 
                     ats_sent = True
+                    
+                elif tpdu.r:
+                    rtpdu, crc = self.rblock_process(tpdu)
+
+                elif tpdu.s:
+                    print("s block")
+                    # Deselect
+                    if len(tpdu._inf_field) == 0:
+                        rtpdu, crc = "C2E0B4", False
+                    # Otherwise, it is a WTX
+
+                elif tpdu.i:
+                    print("i block")
+                    capdu += tpdu.inf
+                    if tpdu.is_chaining() is False:
+                        rapdu = self.process_apdu(capdu)
+                        capdu = bytes()
+                        self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
+                        rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
                 else:
                     rtpdu, crc = self.process_apdu(received, False) 
 
