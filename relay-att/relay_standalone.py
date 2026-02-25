@@ -78,6 +78,7 @@ class Proxmark3Reader():
     def getCardInfo(self) -> Tuple[list[str], bool]:
         # PM3 acts as a reader and launches anticollision procedure to select a card
         self.terminal.sendline("hf 14a reader")
+        self.terminal.readline()
         self.terminal.expect_exact("pm3 -->") # wait until next prompt
         has_ATS = False
 
