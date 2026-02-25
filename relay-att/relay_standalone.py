@@ -269,7 +269,7 @@ class Emu(Iso14443ASession):
                         self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
                 elif received == "500057CD":
-                    rtpdu = ""
+                    rtpdu, crc = "", False
                 else:
                     rtpdu, crc = self.process_apdu(received, False) 
 
