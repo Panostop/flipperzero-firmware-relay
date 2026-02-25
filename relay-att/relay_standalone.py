@@ -249,7 +249,7 @@ class Emu(Iso14443ASession):
                 if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False) and self.ATS:
                     rtpdu, crc = self.ATS, True 
                     ats_sent = True
-                    
+
                 elif tpdu.r:
                     rtpdu, crc = self.rblock_process(tpdu)
 
@@ -268,6 +268,8 @@ class Emu(Iso14443ASession):
                         capdu = bytes()
                         self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
+                elif received == "500057CD":
+                    rtpdu = ""
                 else:
                     rtpdu, crc = self.process_apdu(received, False) 
 
