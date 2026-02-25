@@ -246,7 +246,10 @@ class Emu(Iso14443ASession):
                 tpdu = Tpdu(bytes.fromhex(received))
 
                 #if it looks like an ATS req, we haven't sent is yet, and we have one :
-                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False) and self.ATS:
+                if received == "500057CD":
+                    rtpdu, crc = "", False
+
+                elif (tpdu.tpdu[0] == 0xE0) and (ats_sent is False) and self.ATS:
                     rtpdu, crc = self.ATS, True 
                     ats_sent = True
 
@@ -268,8 +271,7 @@ class Emu(Iso14443ASession):
                         capdu = bytes()
                         self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
-                elif received == "500057CD":
-                    rtpdu, crc = "", False
+                
                 else:
                     rtpdu, crc = self.process_apdu(received, False) 
 
