@@ -468,7 +468,7 @@ static void nfc_run_emu(Cli* cli) {
     furi_hal_nfc_event_start();
 
     while(true) {
-        FuriHalNfcEvent event = furi_hal_nfc_listener_wait_event(50);
+        FuriHalNfcEvent event = furi_hal_nfc_listener_wait_event(100);
         if(event == FuriHalNfcEventTimeout) {
             if(cli_cmd_interrupt_received(cli)) {
                 break;
