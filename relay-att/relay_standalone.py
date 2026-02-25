@@ -255,8 +255,8 @@ print(f"This card will be emulated :\
       \n\t - UID  : {card_info[1]}\
       \n\t - SAK  : {card_info[2]}")
 """
-flipper.set_atqa("4403")
-flipper.set_uid("049D5FCA9C1B90")
+#flipper.set_atqa("4403")
+#flipper.set_uid("049D5FCA9C1B90")
 #flipper.set_sak("20")
 
 
