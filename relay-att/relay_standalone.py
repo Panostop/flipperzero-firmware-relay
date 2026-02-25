@@ -229,7 +229,7 @@ class Emu(Iso14443ASession):
                     rtpdu, crc = self.ATS, True 
                     ats_sent = True
                 else:
-                    rtpdu, crc = self.process_apdu(received, True) 
+                    rtpdu, crc = self.process_apdu(received, False) 
 
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == None:
