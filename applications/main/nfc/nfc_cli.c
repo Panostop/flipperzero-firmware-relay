@@ -22,7 +22,7 @@ bool g_nfc_low_power_mode_off = false;
 bool g_hex_mode = false;
 uint8_t g_uid[20] = {0x04, 0x33, 0x30, 0x3A, 0x97, 0x16, 0x90};
 uint8_t g_uid_len = 0x07;
-uint8_t g_atqa[2] = {0x03, 0x44};
+uint8_t g_atqa[2] = {0x44, 0x03}; //reversed
 uint8_t g_sak = 0x20;
 
 static void nfc_low_power_mode_stop() {
