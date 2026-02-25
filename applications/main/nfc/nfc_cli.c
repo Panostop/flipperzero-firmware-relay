@@ -499,9 +499,6 @@ static void nfc_run_emu(Cli* cli) {
                 printf("\r\n");
 
                 if(nfc_emu_get_resp(cli, rx_cmd))
-                    furi_hal_nfc_reset_mode();
-                    nfc_low_power_mode_start();
-                    furi_hal_nfc_release();
                     break;
                 }
                 while(furi_hal_nfc_timer_block_tx_is_running()) {
