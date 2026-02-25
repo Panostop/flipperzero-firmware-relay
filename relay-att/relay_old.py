@@ -233,7 +233,7 @@ class Emu(Iso14443ASession):
 
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == None:
-                    pass
+                    continue
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
