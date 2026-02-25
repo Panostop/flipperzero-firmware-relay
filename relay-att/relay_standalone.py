@@ -60,33 +60,29 @@ This is the physical setup expected (the Access Card must be placed before start
 '''
 
 
-import time
-import serial
+import serial, pexpect
 from typing import Tuple
-import pexpect
 
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
-#we will need a shell to get the card's information
-from subprocess import * 
-
 
 class Proxmark3Reader():
     def __init__(self,):
-        self.terminal = pexpect.spawn('pm3', encoding='utf-8')
-        self.terminal.expect_exact("pm3 -->")
+        self.terminal = pexpect.spawn('pm3', encoding='utf-8') #initialize communication with the proxmark
+        self.terminal.expect_exact("pm3 -->")#wait for first prompt
         self.communication_initiated = False
 
-    def getCardInfo(self) -> list[str]:
+
+    def getCardInfo(self) -> Tuple[list[str], bool]:
         # PM3 acts as a reader and launches anticollision procedure to select a card
         self.terminal.sendline("hf 14a reader")
         self.terminal.expect_exact("pm3 -->") # wait until next prompt
         has_ATS = False
 
         #formatter
-        # -- original format (ATS line not always present):
+        # -- original format (ATS line not always present and the '+' and 'X's are green) :
 
         #   [+]  UID: XX XX XX XX ...
         #   [+] ATQA: XX XX
@@ -106,8 +102,8 @@ class Proxmark3Reader():
         #ILOVEONELINERSFROMHELL
         card_data = [i.split(': ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','') for i in self.terminal.before.split("\r\n")[:-2]]
         
-        if len(card_data) == 4:
-            has_ATS = True
+        
+        has_ATS =  len(card_data) == 4
         
         return card_data, has_ATS
 
@@ -119,12 +115,13 @@ class Proxmark3Reader():
         print("Error. No proxmark3 device found")
         exit(1)
 
-    def process_bytes(self, raw_bytes:str, add_crc:bool):
+    def process_apdu(self, raw_bytes:str, add_crc:bool) -> Tuple[list[str] | None, bool]:
         answer_has_crc= False
         options_string=[]
 
         if not self.communication_initiated:
             options_string.append("s") # proxmark option to select the card, use only once
+            self.communication_initiated = True
         elif add_crc:
             options_string.append("c") # proxmark option to automatically calculate and add CRC
 
@@ -132,26 +129,29 @@ class Proxmark3Reader():
         self.terminal.sendline(f"hf 14a raw -k{options_string} {raw_bytes}") 
         self.terminal.expect_exact("pm3 -->") #wait until new prompt
 
-        self.communication_initiated = True
         
-        #formatter
-        # -- original format [ XX XX ] represents the CRC, not always present and to isolate :
+        try:
+            #formatter
+            # -- original format [ XX XX ] represents the CRC, not always present and to isolate :
 
-        #   [+]  XX XX XX XX XX ... [ XX XX ]
-        #   [usb] # this line is present because of the prompt-searching string 'pm3 -->'
+            #   [+]  XX XX XX XX XX ... [ XX XX ]
+            #   [usb] # this line is present because of the prompt-searching string 'pm3 -->'
+            
+            # The following oneliner takes the buffer,            | self.terminal.before
+            #   splits it for every line,                         | .split("\r\n")
+            #   keeps only the first line and on this line,       | [0]
+            #   it keeps only what is after the plus sign ([+]),  | .split('[\x1b[32m+\x1b[0m] ')[1]  #complex because of color codes
+            #   and deletes the color formattings and spaces      | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','')
+            #   Then, it splits into two parts : APDU and CRC     | .split('[')
+            
+            #ILOVEONELINERSFROMHELL
+            data = self.terminal.before.split('\r\n')[0].split('[\x1b[32m+\x1b[0m] ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','').split('[')
+            data[-1] = data[-1].replace(']', '') #remove any trailing bracket on the last item, with or without CRC
+            answer_has_crc = len(data)==2 # True if there are 2 items, AKA CRC present
+        except:
+            #we should get here if we dont get any data back from the card
+            data=None
         
-        # The following oneliner takes the buffer,            | self.terminal.before
-        #   splits it for every line,                         | .split("\r\n")
-        #   keeps only the first line and on this line,       | [0]
-        #   it keeps only what is after the plus sign ([+]),  | .split('[\x1b[32m+\x1b[0m] ')[1]  #complex because of color codes
-        #   and deletes the color formattings and spaces      | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','')
-        #   Then, it splits into two parts : APDU and CRC     | .split('[')
-        
-        #ILOVEONELINERSFROMHELL
-        data = self.terminal.before.split('\r\n')[0].split('[\x1b[32m+\x1b[0m] ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','').split('[')
-        data[-1] = data[-1].replace(']', '') #remove any trailing bracket on the last item, with or without CRC
-
-        answer_has_crc = len(data)==2 # True if there are 2 items, AKA CRC present
         
         return data, answer_has_crc
 
@@ -160,7 +160,6 @@ class Proxmark3Reader():
 
 
 class Emu(Iso14443ASession):
-
     def __init__(self, cid=0, nad=0, drv=None, block_size=16, reader=None):
         Iso14443ASession.__init__(self, cid, nad, drv, block_size)
         self._addCID = False
@@ -169,42 +168,41 @@ class Emu(Iso14443ASession):
         # Set to one for an ICC
         self._iblock_pcb_number = 1
         self.iblock_resp_lst = []
+
         self.reader = reader
-        if self.reader:
-            self.reader.connect()
-        else:
+        if not self.reader:
             print("No reader initialized for this emulator")
             exit(7143)
+        else:
+            self.ATS = self.setCardInfo()
+            
 
     def run(self):
         self.drv.start_emulation()
         print("...go!")
         self.low_level_dispatcher()
 
-    def setCardInfo(self):
-        ATS = None
+    def setCardInfo(self) -> str | None:
+        
         card_data, has_ATS = self.reader.getCardInfo()
 
         print(f"This card will be emulated :",
-              "- UID  : {card_info[0]}",
-              "- ATQA : {card_info[1]}",
-              "- SAK  : {card_info[2]}",
+              f"- UID  : {card_data[0]}",
+              f"- ATQA : {card_data[1]}",
+              f"- SAK  : {card_data[2]}",
               sep='\n\t ',
               end='\n'
               )
         
-        self.drv.set_atqa(card_info[0])
-        self.drv.set_uid(card_info[1])
-        self.drv.set_sak(card_info[2])
+        self.drv.set_uid(card_data[0])
+        self.drv.set_atqa(card_data[1])
+        self.drv.set_sak(card_data[2])
 
-        return card_data[3] if has_ATS else None
+        return None if not has_ATS else card_data[3]
 
-
-
-    def process_apdu(self, apdu):
-        return self.reader.process_apdu(apdu)
+    def process_apdu(self, apdu:str, add_crc:bool) -> Tuple[list[str] | None, bool]:
+        return self.reader.process_apdu(apdu, add_crc)
         
-
     def low_level_dispatcher(self):
         capdu = bytes()
         ats_sent = False
@@ -212,21 +210,29 @@ class Emu(Iso14443ASession):
         iblock_resp_lst = []
 
         while 1:
-            received = self.drv.emu_get_cmd()
+            received:str = self.drv.emu_get_cmd()
             rtpdu = None
             print(f"tpdu < {received}")
 
             if received == "off":
                 print("field off")
+
             elif received == "on":
                 print("field on")
                 ats_sent = False
+
             else:
-                
+
+                #if an ATS is requested, we haven't sent is yet, and we have one :
+                if (received[:2] == "E0") and (ats_sent is False) and self.ATS:
+                    rtpdu, crc = self.ATS, True 
+                    ats_sent = True
+                else:
+                    rtpdu, crc = self.process_apdu(received, True) 
 
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == None:
-                    self.drv.emu_send_resp(b'\x09')
+                    self.drv.emu_send_resp(b'\x09') # escape character to stop communication
                     break
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
@@ -237,17 +243,5 @@ flipper.connect()
 flipper.set_mode_emu_iso14443A()
 
 PM3 = Proxmark3Reader() #initialize the reader and card connection
-
-card_info, has_ATS = PM3.getCardInfo() # [UID, ATQA, SAK, *ATS]
-
-print(f"This card will be emulated :\
-      \n\t - ATQA : {card_info[0]}\
-      \n\t - UID  : {card_info[1]}\
-      \n\t - SAK  : {card_info[2]}")
-
-
-
-
-
 emu = Emu(drv=flipper, reader=PM3)
 emu.run()
