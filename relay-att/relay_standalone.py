@@ -60,106 +60,90 @@ This is the physical setup expected (the Access Card must be placed before start
 '''
 
 
-import serial, pexpect
+import time
 from typing import Tuple
 
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
+from smartcard.System import readers
+from smartcard.Exceptions import NoCardException, CardConnectionException
 
-class Proxmark3Reader():
-    def __init__(self,):
-        self.terminal = pexpect.spawn('pm3', encoding='utf-8') #initialize communication with the proxmark
-        self.terminal.expect_exact("pm3 -->")#wait for first prompt
+#we will need a shell to get the card's information
+from subprocess import * 
 
 
-    def getCardInfo(self) -> Tuple[list[str], bool]:
-        # PM3 acts as a reader and launches anticollision procedure to select a card
-        self.terminal.sendline("hf 14a reader")
-        self.terminal.readline()
-        self.terminal.expect_exact("pm3 -->") # wait until next prompt
-        has_ATS = False
+class PCSCReader():
+    def __init__(self, readername: str):
+        self.readername = readername
+        pass
 
-        #formatter
-        # -- original format (ATS line not always present and the '+' and 'X's are green) :
+    def connect(self):
+        reader_list=readers() #list pc/sc readers
 
-        #   [+]  UID: XX XX XX XX ...
-        #   [+] ATQA: XX XX
-        #   [+]  SAK: XX ...[X]
-        #   [+]  ATS: XX XX XX XX ...
-        #
-        #   [usb] # this line is present because of the prompt searching string 'pm3 -->'
+        # Display the list of readers
+        print("Available PC/SC readers :\n")
+        for i in range(len(reader_list)):
+            print(f"\t-\t{reader_list[i].name}")
+        print("")
+
+
+        if not len(reader_list) == 1 or not self.readername in reader_list[0].name:
+            print(f"Need exactly 1 {self.readername} to continue, {len(reader_list)} readers available.")
+            exit(1)
         
-        # The following oneliner takes the buffer,            | self.terminal.before
-        #   splits it for every line,                         | .split("\r\n")
-        #   keeps all but the last two                        | [:-2]
-        #   and creates a list (card_data).                   | card_data = [
-        #   for every line left,                              | i
-        #   it keeps only what is after the two dots (:),     | .split(': ')[1]
-        #   and deletes the ANSI color formattings and spaces | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','')
+        #Card Connection
+        self.connection = reader_list[0].createConnection() # initialize reader connection
+        try :
+            self.connection.connect()
+        except NoCardException: #raised if no card is resent on the reader
+            print("No card on the connected reader")
+            exit(4173)
+        except CardConnectionException:
+            print("retrying in a bit")
+            time.sleep(1)
+            self.connect()
         
-        #ILOVEONELINERSFROMHELL
-        card_data = [i.split(': ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[0m','') for i in self.terminal.before.split("\r\n")[:-2]]
+    def process_apdu(self, data_to_send: bytes) -> bytes:
+        print(f"apdu cmd: {data_to_send.hex()}")
+
+        #send data to the card
+        data_received, sw1, sw2 = self.connection.transmit(list(data_to_send))
+        resp = bytes(data_received + [sw1, sw2])
+        print(f"apdu resp: {resp.hex()}")
+        return resp
+
+def getCardInfo() -> list[str]:
+    """
+    Uses the libnfc C library to gather UID, ATQA and SAK from the card.
+    """
+    
+    # Used files for better clarity and because of issues with pipes
+    with open("CardInfo.txt", "w") as CardInfo:
         
-        #if we are here we can be sure we have a card  to select
-        self.terminal.sendline(f"hf 14a raw -sk 00") #selects the card and keeps the selection active for later
-        self.terminal.expect_exact("pm3 -->") #wait until new prompt
-
-        has_ATS =  len(card_data) == 4
+        # returns the full card info
+        CardInfoCatcher = Popen( ["nfc-list"], 
+                        stdout=CardInfo,
+                        stderr=PIPE,
+                        )
+        CardInfoCatcher.communicate() #wait for the output, it often takes a bit
         
-        return card_data, has_ATS
-
-    def auto_search(self) -> str:
-        for port in serial.tools.list_ports.comports():
-            if "PM3" in port.description or "proxmark3" in port.description:
-                return port.device
-        #not found :
-        print("Error. No proxmark3 device found")
-        exit(1)
-
-    def process_apdu(self, raw_bytes:str, add_crc:bool) -> Tuple[list[str] | None, bool]:
-        answer_has_crc= False
-        options_string=[]
-
-        if add_crc:
-            options_string.append("c") # proxmark option to automatically calculate and add CRC
-
-        #proxmark command for raw data, option -k means keep card selected after receiving answer
-        self.terminal.sendline(f"hf 14a raw -k{options_string} {raw_bytes}") 
-        self.terminal.expect_exact("pm3 -->") #wait until new prompt
-
+    
+    with open("CardInfo.txt", "r") as CardInfo:
+        CardInfoLines = [line.rstrip() for line in CardInfo] #load the file in a list
         
-        try:
-            #formatter
-            # -- original format [ XX XX ] represents the CRC, not always present and to isolate :
-
-            #   [+]  XX XX XX XX XX ... [ XX XX ]
-            #   [usb] # this line is present because of the prompt-searching string 'pm3 -->'
-            
-            # The following oneliner takes the buffer,            | self.terminal.before
-            #   splits it for every line,                         | .split("\r\n")
-            #   keeps only the first line and on this line,       | [0]
-            #   it keeps only what is after the plus sign ([+]),  | .split('[\x1b[32m+\x1b[0m] ')[1]  #wierd looking because of color codes
-            #   and deletes the ANSI color formattings and spaces | .replace(' ', '').replace('\x1b[32m', '').replace('\x1b[31m', '').replace('\x1b[0m','')
-            #   Then, it splits into two parts : APDU and CRC     | .split('[')               \  GREEN  /             \   RED   /             \ WHITE /
-            
-            #ILOVEONELINERSFROMHELL
-            data = self.terminal.before.split('\r\n')[0].split('[\x1b[32m+\x1b[0m] ')[1].replace(' ', '').replace('\x1b[32m', '').replace('\x1b[31m', '').replace('\x1b[0m','').split('[')
-            data[-1] = data[-1].replace(']', '') #remove any trailing bracket on the last item, with or without CRC
-            answer_has_crc = len(data)==2 # True if there are 2 items, AKA CRC present
-        except:
-            #we should get here if we dont get any data back from the card
-            data=None
-        
-        
-        return data, answer_has_crc
-
-    def close(self):
-        self.terminal.close()
-
+        #iloveonelinersfromhell
+        # keep only the second half for the lines we need (the actual values after the ': ')
+        # then remove the spaces
+        CardInfoLines = [''.join(CardInfoLines[i].split(': ')[1].split(' ')) for i in range(3, 6)]
+        print(CardInfoLines)
+    
+    # ATQA / UID / SAK
+    return CardInfoLines
 
 class Emu(Iso14443ASession):
+
     def __init__(self, cid=0, nad=0, drv=None, block_size=16, reader=None):
         Iso14443ASession.__init__(self, cid, nad, drv, block_size)
         self._addCID = False
@@ -168,44 +152,21 @@ class Emu(Iso14443ASession):
         # Set to one for an ICC
         self._iblock_pcb_number = 1
         self.iblock_resp_lst = []
-
         self.reader = reader
-        if not self.reader:
+        if self.reader:
+            self.reader.connect()
+        else:
             print("No reader initialized for this emulator")
             exit(7143)
-        else:
-            self.ATS = self.setCardInfo()
-            
 
     def run(self):
         self.drv.start_emulation()
         print("...go!")
         self.low_level_dispatcher()
 
-    def setCardInfo(self) -> str | None:
-        
-        card_data, has_ATS = self.reader.getCardInfo()
-
-        print(f"This card will be emulated :",
-              f"- UID  : {card_data[0]}",
-              f"- ATQA : {card_data[1]}",
-              f"- SAK  : {card_data[2]}",
-              sep='\n\t ',
-              end='\n'
-              )
-        
-        self.drv.set_uid(card_data[0])
-        self.drv.set_atqa(card_data[1])
-        self.drv.set_sak(card_data[2])
-
-        return None if not has_ATS else card_data[3]
-
-    def process_apdu(self, apdu:str, add_crc:bool) -> Tuple[list[str] | None, bool]:
-        return self.reader.process_apdu(apdu, add_crc)
-    
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
         print("r block")
-        if tpdu.tpdu == b"\xBA\x00\xBE\xD9": #rare case observed, might not be useful for you
+        if tpdu.tpdu == b"\xBA\x00\xBE\xD9": #rare situation observed, might not be useful for you
             rtpdu, crc = "BA00", True
         
         elif tpdu.tpdu == b"\xBB\x00\x66\xC0": #rare case observed, might not be useful for you
@@ -223,6 +184,11 @@ class Emu(Iso14443ASession):
 
         return rtpdu, crc
 
+
+    def process_apdu(self, apdu):
+        return self.reader.process_apdu(apdu)
+        
+
     def low_level_dispatcher(self):
         capdu = bytes()
         ats_sent = False
@@ -230,31 +196,30 @@ class Emu(Iso14443ASession):
         iblock_resp_lst = []
 
         while 1:
-            received:str = self.drv.emu_get_cmd()
+            received = self.drv.emu_get_cmd()
             rtpdu = None
             print(f"tpdu < {received}")
 
             if received == "off":
                 print("field off")
-
             elif received == "on":
                 print("field on")
                 ats_sent = False
-
             else:
                 tpdu = Tpdu(bytes.fromhex(received))
-
-                #if it looks like an ATS req, we haven't sent is yet, and we have one :
-                if received == "500057CD":
+                
+                if received == 'D0110052A6':
+                    rtpdu, crc = 'D0', True
+                elif received == '500057CD':
                     rtpdu, crc = "", False
-
-                elif (tpdu.tpdu[0] == 0xE0) and (ats_sent is False) and self.ATS:
-                    rtpdu, crc = self.ATS, True 
+                    print("EOC")
+                elif (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
+                    rtpdu, crc = "067577810280", True # l'ATS 
                     ats_sent = True
 
                 elif tpdu.r:
                     rtpdu, crc = self.rblock_process(tpdu)
-
+                
                 elif tpdu.s:
                     print("s block")
                     # Deselect
@@ -270,14 +235,11 @@ class Emu(Iso14443ASession):
                         capdu = bytes()
                         self.iblock_resp_lst = self.chaining_iblock(data=rapdu)
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
-                
-                else:
-                    rtpdu, crc = self.process_apdu(received, False) 
 
                 print(f">>> rtdpu {rtpdu}\n")
-                if rtpdu == None:
-                    self.drv.emu_send_resp(b'\x09') # escape character to stop communication
-                    break
+                if rtpdu == "":
+                    self.drv.emu_send_resp(b"\x09", crc)
+                    exit(7143)
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
@@ -286,6 +248,19 @@ flipper = flipper_zero.FlipperZero("", debug=False)
 flipper.connect()
 flipper.set_mode_emu_iso14443A()
 
-PM3 = Proxmark3Reader() #initialize the reader and card connection
-emu = Emu(drv=flipper, reader=PM3)
+"""
+card_info = getCardInfo() # [ATQA, UID, SAK]
+print(f"This card will be emulated :\
+      \n\t - ATQA : {card_info[0]}\
+      \n\t - UID  : {card_info[1]}\
+      \n\t - SAK  : {card_info[2]}")
+"""
+flipper.set_atqa("4403")
+flipper.set_uid("049D5FCA9C1B90")
+flipper.set_sak("20")
+
+
+pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
+emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
+
