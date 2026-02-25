@@ -207,8 +207,13 @@ class Emu(Iso14443ASession):
                 ats_sent = False
             else:
                 tpdu = Tpdu(bytes.fromhex(received))
-
-                if (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
+                
+                if received == 'D0110052A6':
+                    rtpdu, crc = 'D0', True
+                elif received == '500057CD':
+                    rtpdu, crc = "", False
+                    print("EOC")
+                elif (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
                     rtpdu, crc = "067577810280", True # l'ATS 
                     ats_sent = True
 
@@ -232,8 +237,9 @@ class Emu(Iso14443ASession):
                         rtpdu, crc = self.iblock_resp_lst.pop(0).hex(), True
 
                 print(f">>> rtdpu {rtpdu}\n")
-                if rtpdu == None:
-                    continue
+                if rtpdu == "":
+                    self.drv.emu_send_resp(b"\x09", crc)
+                    exit(7143)
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
 
@@ -248,11 +254,11 @@ print(f"This card will be emulated :\
       \n\t - ATQA : {card_info[0]}\
       \n\t - UID  : {card_info[1]}\
       \n\t - SAK  : {card_info[2]}")
-
-#flipper.set_atqa(card_info[0])
-#flipper.set_uid(card_info[1])
-#flipper.set_sak(card_info[2])
 """
+flipper.set_atqa("4403")
+flipper.set_uid("049D5FCA9C1B90")
+flipper.set_sak("20")
+
 
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 emu = Emu(drv=flipper, reader=pcsc_reader)

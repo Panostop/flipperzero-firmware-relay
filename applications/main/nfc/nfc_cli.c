@@ -20,10 +20,10 @@ FuriHalNfcMode g_NfcMode = FuriHalNfcModePoller;
 bool field_on = false;
 bool g_nfc_low_power_mode_off = false;
 bool g_hex_mode = false;
-uint8_t g_uid[20] = {0x04, 0x9D, 0x5F, 0xCA, 0x9C, 0x1B, 0x90};
+uint8_t g_uid[20] = {0x04, 0x9D, 0x5F, 0xCA, 0x9C, 0x1B, 0x91};
 uint8_t g_uid_len = 0x07;
-uint8_t g_atqa[2] = {0x44, 0x03}; //reversed
-uint8_t g_sak = 0x20;
+uint8_t g_atqa[2] = {0x44, 0x02}; //reversed
+uint8_t g_sak = 0x21;
 
 static void nfc_low_power_mode_stop() {
     if(g_nfc_low_power_mode_off) {
@@ -406,7 +406,7 @@ static bool nfc_emu_get_resp(Cli* cli, BitBuffer* rx_data) {
     c = cli_getc(cli);
     if(c == 0xA) {
         c = cli_getc(cli);
-    } else if(c == 9) {
+    } else if(c == 0x09) {
         return true;
     }
 
@@ -468,7 +468,7 @@ static void nfc_run_emu(Cli* cli) {
     furi_hal_nfc_event_start();
 
     while(true) {
-        FuriHalNfcEvent event = furi_hal_nfc_listener_wait_event(100);
+        FuriHalNfcEvent event = furi_hal_nfc_listener_wait_event(50);
         if(event == FuriHalNfcEventTimeout) {
             if(cli_cmd_interrupt_received(cli)) {
                 break;
@@ -499,6 +499,9 @@ static void nfc_run_emu(Cli* cli) {
                 printf("\r\n");
 
                 if(nfc_emu_get_resp(cli, rx_cmd))
+                    furi_hal_nfc_reset_mode();
+                    nfc_low_power_mode_start();
+                    furi_hal_nfc_release();
                     break;
                 }
                 while(furi_hal_nfc_timer_block_tx_is_running()) {
