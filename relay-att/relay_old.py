@@ -59,7 +59,7 @@ This is the physical setup expected (the Access Card must be placed before start
 
 '''
 
-
+'''
 import time
 from typing import Tuple
 
@@ -263,12 +263,12 @@ flipper.set_sak("20")
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
 emu = Emu(drv=flipper, reader=pcsc_reader)
 emu.run()
-
+'''
 
 
 
 ###Take pm3
-"""
+
 import serial, pexpect
 from typing import Tuple
 
@@ -499,7 +499,7 @@ PM3 = Proxmark3Reader() #initialize the reader and card connection
 emu = Emu(drv=flipper, reader=PM3)
 emu.run()
 
-"""
+
 
 
 """
