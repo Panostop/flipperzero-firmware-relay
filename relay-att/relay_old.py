@@ -405,7 +405,7 @@ class Emu(Iso14443ASession):
         
         self.drv.set_uid(card_data[0])
         self.drv.set_atqa(card_data[1])
-        self.drv.set_sak(card_data[2])
+        #self.drv.set_sak(card_data[2])
 
         return None if not has_ATS else card_data[3]
 
