@@ -1,4 +1,4 @@
-### relay_old.py, only present to keep a trace of the older versions
+### relay_old.py, only present to keep an easily accessible trace of the other versions
 '''
 DISCLAIMER : This program was created for research and educational purposes only with 
     no warranty whatsoever.
@@ -6,7 +6,7 @@ DISCLAIMER : This program was created for research and educational purposes only
 Copyright (C) 2026 Solal TESSIER
 
 Part of this code was inspired by Guillaume VINET (gvinet)'s 
-    example code for his python lib pynfcreader : pynfcreader.examples.emu_flipper_zero_iso14443_a_relay.py
+example code for his python lib pynfcreader : examples/emu_flipper_zero_iso14443_a_relay.py
 
     Copyright (C) 2015-2024 Guillaume VINET
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,14 @@ Using the pyscard (smartcard) module, the goal is to simulate a NFC relay attack
     without the access card being physically close to the reader using
     an ACR-122 and a FlipperZero with modded firmware by gvinet on GitHub. To run this,
     you will also need to download and compile the libnfc library.
-I have forked gvinet's repo to add a few upgrades
+
+    On top of that, the code uses the pyNFCReader library by gvinet. 
+    I have forked his repo to correct a few errors, so you shouldn't install it with pip.
+    you should install the fixed version from my fork
+    (https://github.com/Panostop/pynfcreader)
+
+
+I have forked gvinet's Flipper custom firmware repo to add a few upgrades
     (https://github.com/Panostop/flipperzero-firmware-relay).
 
 
@@ -38,17 +45,18 @@ To set up the Flipper :
         $ git clone "https://github.com/Panostop/flipperzero-firmware-relay.git" 
         $ cd flipperzero-firmware-relay
 
-        # the following script can be used each time you need it, it cleans, compiles and flashes the flipper
+        # the following script can be used each time you need it : 
+        # it cleans, compiles and flashes the flipper, you can still use fbt normally
         $ ./flasher
 
-    - wait for the build and installation to finish on the Flipper (can take a while)
+    - after the flipper is flashed, you can use it for the attack !
 
 The ACR122 is not used twice because of restrictions in emulation mode.
 
 For this program to work, you will need to call it with root privileges because of
     the pyscard module. To do so, if you use pyenv and because of pyenv shims, call 
     
-    $ sudo $(which python) relay.py
+    $ sudo $(which python) rela_att/relay_standalone.py
     
     to avoid sudo using its own python environment
 
@@ -56,6 +64,15 @@ For this program to work, you will need to call it with root privileges because 
 This is the physical setup expected (the Access Card must be placed before start):
 
     [Access Card].))  ((.[ACR-122U]---[RasPi]---[FlipperZero].))  ((.[Reader]
+
+    
+Last note : When the program is running, the only 'clean' way of stopping it is with ^C
+    ONLY if there was no error, no EOC.
+    No matter how it stops, if the flipperzero connection blocks the program, 
+    restart it physically (hold Back+Left buttons for a while)
+
+    you might encounter this a lot, this comes from the applications/main/nfc/nfc_cli.c file
+    with which I have yet to find a clean solution to exit the run_emu function.
 
 '''
 

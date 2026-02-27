@@ -1,3 +1,9 @@
+# -- Relay Note --
+This fork aims at proposing a research and educational purposed program.
+The python program is available at ./relay_att/relay_standalone.py.
+All setup and usage instructions are precisely detailed here, I advise you to go here first. ~Panostopp
+
+
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="/.github/assets/dark_theme_banner.png">
     <source media="(prefers-color-scheme: light)" srcset="/.github/assets/light_theme_banner.png">
@@ -70,7 +76,7 @@ git clone --recursive https://github.com/flipperdevices/flipperzero-firmware.git
 
 Panostop - I have made a small script to automate cleaning, compiling and flashing to the flipper, you can run it with :
 ```shell
-./maker
+./flasher
 ```
 You can still use fbt normally with the following instructions :
 

