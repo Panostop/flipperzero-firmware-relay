@@ -256,8 +256,8 @@ print(f"This card will be emulated :\
       \n\t - SAK  : {card_info[2]}")
 """
 flipper.set_atqa("4403")
-flipper.set_uid("049D5FCA9C1B90")
-#flipper.set_sak("20")
+flipper.set_uid("0433303A871690")
+#flipper.set_sak("20") #je n'ai pas réussi à le faire fonctionner
 
 
 pcsc_reader = PCSCReader('ACR122') #initialize the reader and card connection
